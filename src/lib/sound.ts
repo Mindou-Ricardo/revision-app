@@ -6,8 +6,11 @@ class SoundManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('revision_sound_muted');
-      this.isMuted = stored === 'true';
+      try {
+        this.isMuted = localStorage.getItem('revision_sound_muted') === 'true';
+      } catch {
+        // localStorage indisponible
+      }
     }
   }
 
@@ -27,8 +30,10 @@ class SoundManager {
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
-    if (typeof window !== 'undefined') {
+    try {
       localStorage.setItem('revision_sound_muted', String(this.isMuted));
+    } catch {
+      // localStorage indisponible
     }
     return this.isMuted;
   }

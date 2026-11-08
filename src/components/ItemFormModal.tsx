@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Item, ItemType } from '@/types';
 import { X, Plus, Check, Terminal, BookOpen } from 'lucide-react';
 
 interface ItemFormModalProps {
-  isOpen: boolean;
   onClose: () => void;
   onSave: (itemData: Omit<Item, 'id' | 'created_at' | 'progress'>) => Promise<void>;
   initialData?: Item | null;
@@ -14,60 +13,36 @@ interface ItemFormModalProps {
 
 const POPULAR_CATEGORIES = ['Linux', 'Git', 'Docker', 'SQL', 'TypeScript', 'Réseau', 'Architecture'];
 
-export function ItemFormModal({ isOpen, onClose, onSave, initialData, defaultCategory }: ItemFormModalProps) {
-  const [title, setTitle] = useState('');
-  const [targetText, setTargetText] = useState('');
-  const [type, setType] = useState<ItemType>('command');
-  const [category, setCategory] = useState('Linux');
-  const [customCategory, setCustomCategory] = useState('');
-  const [targetDays, setTargetDays] = useState(7);
-  const [explanation, setExplanation] = useState('');
+/**
+ * Le parent monte ce composant uniquement quand il est ouvert, avec une `key`
+ * différente par notion : l'état est donc initialisé une fois depuis les props.
+ */
+export function ItemFormModal({ onClose, onSave, initialData, defaultCategory }: ItemFormModalProps) {
+  const initialCategory = initialData?.category ?? defaultCategory ?? 'Linux';
+  const isPopular = POPULAR_CATEGORIES.includes(initialCategory);
+
+  const [title, setTitle] = useState(initialData?.title ?? '');
+  const [targetText, setTargetText] = useState(initialData?.target_text ?? '');
+  const [type, setType] = useState<ItemType>(initialData?.type ?? 'command');
+  const [category, setCategory] = useState(isPopular ? initialCategory : 'Autre');
+  const [customCategory, setCustomCategory] = useState(isPopular ? '' : initialCategory);
+  const [targetDays, setTargetDays] = useState(initialData?.target_days || 7);
+  const [explanation, setExplanation] = useState(initialData?.explanation ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title);
-      setTargetText(initialData.target_text);
-      setType(initialData.type);
-      if (POPULAR_CATEGORIES.includes(initialData.category)) {
-        setCategory(initialData.category);
-        setCustomCategory('');
-      } else {
-        setCategory('Autre');
-        setCustomCategory(initialData.category);
-      }
-      setTargetDays(initialData.target_days || 7);
-      setExplanation(initialData.explanation || '');
-    } else {
-      setTitle('');
-      setTargetText('');
-      setType('command');
-      const catToUse = defaultCategory || 'Linux';
-      if (POPULAR_CATEGORIES.includes(catToUse)) {
-        setCategory(catToUse);
-        setCustomCategory('');
-      } else {
-        setCategory('Autre');
-        setCustomCategory(catToUse);
-      }
-      setTargetDays(7);
-      setExplanation('');
-    }
-  }, [initialData, defaultCategory, isOpen]);
-
-  if (!isOpen) return null;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !targetText.trim()) return;
 
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await onSave({
         title: title.trim(),
         target_text: targetText.trim(),
         type,
-        category: customCategory.trim() || category,
+        category: category === 'Autre' ? customCategory.trim() : category,
         target_days: Number(targetDays) || 7,
         explanation: explanation.trim() || undefined,
       });
@@ -75,6 +50,9 @@ export function ItemFormModal({ isOpen, onClose, onSave, initialData, defaultCat
       onClose();
     } catch (err) {
       console.error(err);
+      setErrorMessage(
+        err instanceof Error ? `Enregistrement impossible : ${err.message}` : 'Enregistrement impossible.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -224,6 +202,12 @@ export function ItemFormModal({ isOpen, onClose, onSave, initialData, defaultCat
               className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {errorMessage && (
+            <p role="alert" className="text-xs font-medium text-rose-600 dark:text-rose-400">
+              {errorMessage}
+            </p>
+          )}
 
           {/* Submit */}
           <div className="pt-2">

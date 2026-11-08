@@ -10,6 +10,7 @@ interface HeaderProps {
   isSupabase: boolean;
   totalCards: number;
   completedTodayCount: number;
+  isLoading?: boolean;
 }
 
 export function Header({
@@ -17,6 +18,7 @@ export function Header({
   isSupabase,
   totalCards,
   completedTodayCount,
+  isLoading = false,
 }: HeaderProps) {
   const percentToday = totalCards > 0 ? Math.round((completedTodayCount / totalCards) * 100) : 0;
 
@@ -68,10 +70,10 @@ export function Header({
             )}
           </div>
 
-          {/* Daily completion badge (desktop) */}
+          {/* Daily completion badge (desktop) — masqué tant que les données chargent */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 text-xs font-semibold text-blue-700 dark:text-blue-300">
             <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400 fill-current" />
-            <span>
+            <span className={isLoading ? 'invisible' : undefined}>
               {completedTodayCount}/{totalCards} ({percentToday}%)
             </span>
           </div>

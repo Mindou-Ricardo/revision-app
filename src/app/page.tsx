@@ -11,6 +11,7 @@ import {
   isCompletedToday,
   exportDataAsJSON,
 } from '@/lib/storage';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { Header } from '@/components/Header';
 import { FolderCard } from '@/components/FolderCard';
 import { ItemCard } from '@/components/ItemCard';
@@ -29,21 +30,41 @@ import {
   Upload,
   ArrowLeft,
   FolderOpen,
-  Box,
-  GitBranch,
-  Terminal,
-  BookOpen,
-  Database,
-  Folder,
+  Loader2,
 } from 'lucide-react';
+import { FolderIcon } from '@/components/FolderIcon';
+
+// Répertoire ouvert, conservé le temps de l'onglet pour survivre à une actualisation.
+const SELECTED_FOLDER_KEY = 'memora_selected_folder';
+
+function persistSelectedFolder(name: string | null) {
+  try {
+    if (name) sessionStorage.setItem(SELECTED_FOLDER_KEY, name);
+    else sessionStorage.removeItem(SELECTED_FOLDER_KEY);
+  } catch {
+    // sessionStorage indisponible
+  }
+}
+
+function readSelectedFolder(): string | null {
+  try {
+    return sessionStorage.getItem(SELECTED_FOLDER_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
-  const [isSupabase, setIsSupabase] = useState<boolean>(false);
+  const [isSupabase, setIsSupabase] = useState<boolean>(isSupabaseConfigured);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Navigation par répertoires
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolderState] = useState<string | null>(null);
+  const setSelectedFolder = (name: string | null) => {
+    setSelectedFolderState(name);
+    persistSelectedFolder(name);
+  };
 
   // Filters & Search
   const [filterTab, setFilterTab] = useState<'all' | 'todo' | 'done'>('all');
@@ -56,9 +77,26 @@ export default function Home() {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
-  // Charger les données au démarrage
+  // Charger les données au démarrage, puis restaurer le répertoire ouvert
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    fetchItems()
+      .then((res) => {
+        if (cancelled) return;
+        setItems(res.items);
+        setIsSupabase(res.isSupabase);
+        const savedFolder = readSelectedFolder();
+        if (savedFolder && res.items.some((i) => (i.category || 'Général') === savedFolder)) {
+          setSelectedFolderState(savedFolder);
+        }
+      })
+      .catch((e) => console.error(e))
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Raccourcis clavier globaux (/, n, Echap)
@@ -75,26 +113,14 @@ export default function Home() {
         setEditingItem(null);
         setIsAddModalOpen(true);
       } else if (e.key === 'Escape' && selectedFolder) {
-        setSelectedFolder(null);
+        setSelectedFolderState(null);
+        persistSelectedFolder(null);
       }
     };
 
     window.addEventListener('keydown', handleGlobalKeys);
     return () => window.removeEventListener('keydown', handleGlobalKeys);
   }, [selectedFolder]);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetchItems();
-      setItems(res.items);
-      setIsSupabase(res.isSupabase);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSaveItem = async (
     itemData: Omit<Item, 'id' | 'created_at' | 'progress'>
@@ -119,30 +145,42 @@ export default function Home() {
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (confirm('Supprimer cette notion ?')) {
+    if (!confirm('Supprimer cette notion ?')) return;
+    try {
       await removeItem(itemId);
       setItems((prev) => prev.filter((item) => item.id !== itemId));
+    } catch (e) {
+      console.error(e);
+      alert(`Suppression impossible : ${e instanceof Error ? e.message : 'erreur inconnue'}`);
     }
   };
 
   const handleSessionComplete = async (itemId: string, mode: DrillMode) => {
-    const updatedProg = await completeRepetitionSession(itemId, mode);
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, progress: updatedProg } : item
-      )
-    );
+    const targetDays = items.find((i) => i.id === itemId)?.target_days ?? 7;
+    try {
+      const updatedProg = await completeRepetitionSession(itemId, mode, targetDays);
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, progress: updatedProg } : item
+        )
+      );
+    } catch (e) {
+      console.error(e);
+      alert(`Progression non enregistrée : ${e instanceof Error ? e.message : 'erreur inconnue'}`);
+    }
   };
 
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const addedItems: Item[] = [];
     try {
       const text = await file.text();
       const imported = JSON.parse(text);
-      if (Array.isArray(imported)) {
-        const addedItems: Item[] = [];
+      if (!Array.isArray(imported)) {
+        alert('Le fichier JSON doit contenir une liste de notions.');
+      } else {
         for (const itemData of imported) {
           if (itemData.title && itemData.target_text) {
             const created = await saveNewItem({
@@ -156,12 +194,18 @@ export default function Home() {
             addedItems.push(created);
           }
         }
-        setItems((prev) => [...addedItems, ...prev]);
         alert(`${addedItems.length} notion(s) importée(s) avec succès !`);
       }
-    } catch {
-      alert('Erreur lors de la lecture du fichier JSON.');
+    } catch (e) {
+      console.error(e);
+      alert(
+        e instanceof SyntaxError
+          ? 'Erreur lors de la lecture du fichier JSON.'
+          : `Import interrompu après ${addedItems.length} notion(s) : ${e instanceof Error ? e.message : 'erreur inconnue'}`
+      );
     } finally {
+      // Les notions déjà créées restent affichées, même si l'import a échoué en cours de route
+      if (addedItems.length > 0) setItems((prev) => [...addedItems, ...prev]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -224,16 +268,6 @@ export default function Home() {
     isCompletedToday(i.progress?.last_completed_date)
   ).length;
 
-  const getFolderIcon = (categoryName: string) => {
-    const lower = categoryName.toLowerCase();
-    if (lower.includes('docker')) return <Box className="w-5 h-5 text-blue-500" />;
-    if (lower.includes('git')) return <GitBranch className="w-5 h-5 text-blue-500" />;
-    if (lower.includes('linux')) return <Terminal className="w-5 h-5 text-blue-400" />;
-    if (lower.includes('sql') || lower.includes('base')) return <Database className="w-5 h-5 text-blue-500" />;
-    if (lower.includes('archi') || lower.includes('déf')) return <BookOpen className="w-5 h-5 text-blue-400" />;
-    return <Folder className="w-5 h-5 text-blue-500" />;
-  };
-
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200">
       {/* Top Header */}
@@ -245,12 +279,13 @@ export default function Home() {
         isSupabase={isSupabase}
         totalCards={totalCount}
         completedTodayCount={completedTodayCount}
+        isLoading={isLoading}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Banner if in Local Storage mode with quick Supabase guide */}
-        {!isSupabase && (
+        {!isLoading && !isSupabase && (
           <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 text-blue-950 dark:text-blue-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -273,7 +308,17 @@ export default function Home() {
         {/* ------------------------------------------------------------- */}
         {/* VUE 1 : ACCUEIL — QUE LES RÉPERTOIRES (FOLDERS)               */}
         {/* ------------------------------------------------------------- */}
-        {!selectedFolder ? (
+        {isLoading ? (
+          /* Écran neutre pendant le chargement : évite d'afficher l'accueil
+             puis de basculer sur le répertoire restauré. */
+          <div
+            role="status"
+            className="py-24 flex flex-col items-center justify-center gap-3 text-zinc-400 text-sm"
+          >
+            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            <span>Chargement de tes répertoires...</span>
+          </div>
+        ) : !selectedFolder ? (
           <div>
             {/* Hero / Header Accueil Répertoires */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -328,11 +373,7 @@ export default function Home() {
             </div>
 
             {/* Grille des Répertoires uniquement */}
-            {isLoading ? (
-              <div className="py-20 text-center text-zinc-400 text-sm">
-                Chargement de tes répertoires...
-              </div>
-            ) : filteredFolders.length === 0 ? (
+            {filteredFolders.length === 0 ? (
               <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-zinc-50/50 dark:bg-zinc-900/30 p-8">
                 <FolderOpen className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
                 <h3 className="font-bold text-zinc-700 dark:text-zinc-300 text-base mb-1">
@@ -344,7 +385,10 @@ export default function Home() {
                     : 'Commence par créer ton premier répertoire ou importer un pack thématique.'}
                 </p>
                 <button
-                  onClick={() => setIsAddModalOpen(true)}
+                  onClick={() => {
+                    setEditingItem(null);
+                    setIsAddModalOpen(true);
+                  }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm shadow-blue-600/20"
                 >
                   <Plus className="w-4 h-4" />
@@ -390,7 +434,7 @@ export default function Home() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xs">
-                    {getFolderIcon(selectedFolder)}
+                    <FolderIcon name={selectedFolder} />
                   </div>
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
@@ -522,16 +566,18 @@ export default function Home() {
       )}
 
       {/* Add / Edit Item Modal */}
-      <ItemFormModal
-        isOpen={isAddModalOpen}
-        initialData={editingItem}
-        defaultCategory={selectedFolder || undefined}
-        onClose={() => {
-          setIsAddModalOpen(false);
-          setEditingItem(null);
-        }}
-        onSave={handleSaveItem}
-      />
+      {isAddModalOpen && (
+        <ItemFormModal
+          key={editingItem?.id ?? 'new'}
+          initialData={editingItem}
+          defaultCategory={selectedFolder || undefined}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setEditingItem(null);
+          }}
+          onSave={handleSaveItem}
+        />
+      )}
     </div>
   );
 }
