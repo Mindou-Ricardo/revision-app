@@ -8,6 +8,7 @@ import {
   removeItem,
   completeRepetitionSession,
   isCompletedToday,
+  exportDataAsJSON,
 } from '@/lib/storage';
 import { Header } from '@/components/Header';
 import { ItemCard } from '@/components/ItemCard';
@@ -24,6 +25,7 @@ import {
   Plus,
   Layers,
   Package,
+  Download,
 } from 'lucide-react';
 
 export default function Home() {
@@ -35,6 +37,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [filterTab, setFilterTab] = useState<'all' | 'todo' | 'done'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Modals state
   const [activeDrillItem, setActiveDrillItem] = useState<Item | null>(null);
@@ -44,6 +47,28 @@ export default function Home() {
   // Charger les données au démarrage
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Raccourcis clavier globaux (/, n, p)
+  useEffect(() => {
+    const handleGlobalKeys = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setIsAddModalOpen(true);
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        setIsPacksModalOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeys);
+    return () => window.removeEventListener('keydown', handleGlobalKeys);
   }, []);
 
   const loadData = async () => {
@@ -140,16 +165,14 @@ export default function Home() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 md:py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Banner if in Local Storage mode with quick Supabase guide */}
         {!isSupabase && (
-          <div className="mb-6 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 text-blue-950 dark:text-blue-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 text-blue-950 dark:text-blue-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <span>
-                <strong>Mode Démonstration & LocalStorage actif :</strong> Tes révisions sont
-                enregistrées dans ton navigateur. Pour synchroniser avec ta base Supabase, renseigne
-                tes clés dans <code className="bg-blue-200/50 dark:bg-blue-900/60 px-1 py-0.5 rounded font-mono">.env.local</code>.
+                <strong>Mode Démonstration & LocalStorage :</strong> Données locales. Pour synchroniser avec Supabase, ajoute tes clés dans <code className="bg-blue-200/50 dark:bg-blue-900/60 px-1 py-0.5 rounded font-mono">.env.local</code>.
               </span>
             </div>
             <a
@@ -158,30 +181,30 @@ export default function Home() {
               rel="noreferrer"
               className="inline-flex items-center gap-1 font-semibold text-blue-700 dark:text-blue-300 hover:underline shrink-0"
             >
-              <span>Voir Supabase</span>
+              <span>Supabase</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
         )}
 
         {/* Hero Section / Summary */}
-        <section className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <section className="mb-6 sm:mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <h2 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
                 Tableau de bord des révisions
               </h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 sm:mt-1">
                 La règle des 21 : Répète chaque commande ou notion 21 fois par jour pour forcer
                 l&apos;ancrage réflexe.
               </p>
             </div>
 
             {/* Quick stats pills */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
                 onClick={() => setFilterTab('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
                   filterTab === 'all'
                     ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-2xs'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800'
@@ -193,7 +216,7 @@ export default function Home() {
 
               <button
                 onClick={() => setFilterTab('todo')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
                   filterTab === 'todo'
                     ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-blue-600 dark:text-blue-400 border border-zinc-200 dark:border-zinc-800'
@@ -205,7 +228,7 @@ export default function Home() {
 
               <button
                 onClick={() => setFilterTab('done')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
                   filterTab === 'done'
                     ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs'
                     : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800'
@@ -237,16 +260,27 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Search box */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher une notion..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          {/* Search box & Export */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher... (Tape /)"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <button
+              onClick={() => exportDataAsJSON(items)}
+              title="Exporter mes notions en JSON (Sauvegarde)"
+              className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+            >
+              <Download className="w-4 h-4" />
+            </button>
           </div>
         </div>
 

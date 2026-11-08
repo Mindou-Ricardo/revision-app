@@ -128,17 +128,17 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Top Bar */}
-        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
-          <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/50">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold rounded-md bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/50">
               {item.category}
             </span>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400">
               {item.type === 'command' ? 'Commande' : 'Définition'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Sound Mute Toggle */}
             <button
               onClick={toggleSound}
@@ -152,25 +152,25 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
             <div className="flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs font-medium border border-zinc-200/60 dark:border-zinc-700/60">
               <button
                 onClick={() => setMode('typing')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
+                className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md transition-colors ${
                   mode === 'typing'
                     ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
                     : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 <Keyboard className="w-3.5 h-3.5" />
-                <span>Frappe</span>
+                <span className="text-xs">Frappe</span>
               </button>
               <button
                 onClick={() => setMode('verbal')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
+                className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-md transition-colors ${
                   mode === 'verbal'
                     ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
                     : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 <Mic className="w-3.5 h-3.5" />
-                <span>Oral</span>
+                <span className="text-xs">Oral</span>
               </button>
             </div>
 
@@ -184,7 +184,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 md:p-8 flex flex-col items-center text-center">
+        <div className="p-4 sm:p-6 md:p-8 flex flex-col items-center text-center overflow-y-auto max-h-[calc(90vh-60px)]">
           {!isFinished ? (
             <>
               {/* Question / Title */}

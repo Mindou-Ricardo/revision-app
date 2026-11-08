@@ -303,3 +303,15 @@ export async function completeRepetitionSession(
 
   return updatedProgress;
 }
+
+export function exportDataAsJSON(items: Item[]): void {
+  if (typeof window === 'undefined') return;
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(items, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute('href', dataStr);
+  downloadAnchor.setAttribute('download', `revision-21-backup-${getTodayString()}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
