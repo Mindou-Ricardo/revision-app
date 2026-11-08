@@ -28,6 +28,54 @@ export async function fetchItems(): Promise<{ items: Item[]; isSupabase: boolean
         .order('created_at', { ascending: false });
 
       if (!itemsError && itemsData) {
+        if (itemsData.length === 0) {
+          // Si la base est encore vide, insérer automatiquement les premières notions d'exemple
+          for (const item of DEFAULT_ITEMS) {
+            const { data: inserted } = await supabase
+              .from('items')
+              .insert({
+                title: item.title,
+                target_text: item.target_text,
+                type: item.type,
+                category: item.category,
+                target_days: item.target_days,
+                explanation: item.explanation,
+              })
+              .select()
+              .single();
+
+            if (inserted) {
+              await supabase.from('item_progress').insert({
+                item_id: inserted.id,
+                current_streak: 0,
+                total_repetitions: 0,
+                is_mastered: false,
+              });
+            }
+          }
+
+          const { data: seeded } = await supabase
+            .from('items')
+            .select('*, progress:item_progress(*)')
+            .order('created_at', { ascending: false });
+
+          if (seeded) {
+            const formatted: Item[] = seeded.map((row) => ({
+              id: row.id,
+              user_id: row.user_id,
+              title: row.title,
+              target_text: row.target_text,
+              type: row.type,
+              category: row.category,
+              target_days: row.target_days,
+              explanation: row.explanation,
+              created_at: row.created_at,
+              progress: Array.isArray(row.progress) ? row.progress[0] : row.progress,
+            }));
+            return { items: formatted, isSupabase: true };
+          }
+        }
+
         const formatted: Item[] = itemsData.map((row) => ({
           id: row.id,
           user_id: row.user_id,

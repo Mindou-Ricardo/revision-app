@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Item, DrillMode } from '@/types';
+import { sound } from '@/lib/sound';
 import confetti from 'canvas-confetti';
 import {
   X,
@@ -13,6 +14,8 @@ import {
   ArrowRight,
   Flame,
   Volume2,
+  VolumeX,
+  Timer,
 } from 'lucide-react';
 
 interface DrillModalProps {
@@ -27,8 +30,13 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
   const [typedInput, setTypedInput] = useState<string>('');
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [feedbackAnim, setFeedbackAnim] = useState<boolean>(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [isMuted, setIsMuted] = useState<boolean>(sound.getIsMuted());
 
+  // Chronomètre de fluidité
+  const [startTime, setStartTime] = useState<number>(() => Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+  const inputRef = useRef<HTMLInputElement>(null);
   const TARGET_REPS = 21;
 
   // Auto-focus l'input à l'ouverture
@@ -55,11 +63,16 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mode, repCount, isFinished]);
 
+  const toggleSound = () => {
+    const muted = sound.toggleMute();
+    setIsMuted(muted);
+  };
+
   const triggerConfetti = () => {
     try {
       confetti({
-        particleCount: 100,
-        spread: 70,
+        particleCount: 110,
+        spread: 75,
         origin: { y: 0.6 },
       });
     } catch {
@@ -72,12 +85,18 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
     setRepCount(nextCount);
     setTypedInput('');
 
-    // Feedback visuel court
+    // Feedback sonore & visuel
     setFeedbackAnim(true);
     setTimeout(() => setFeedbackAnim(false), 200);
 
-    if (nextCount >= TARGET_REPS) {
+    if (nextCount < TARGET_REPS) {
+      sound.playRepetitionTick(nextCount);
+    } else {
+      // 21 répétitions atteintes !
+      const totalSec = Math.round((Date.now() - startTime) / 1000);
+      setElapsedSeconds(totalSec);
       setIsFinished(true);
+      sound.playVictoryChime();
       triggerConfetti();
       onSessionComplete(item.id, mode);
     }
@@ -104,10 +123,9 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
   };
 
   const currentStreak = item.progress?.current_streak || 0;
-  const progressPercent = Math.min(100, Math.round((repCount / TARGET_REPS) * 100));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Top Bar */}
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
@@ -121,6 +139,15 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Sound Mute Toggle */}
+            <button
+              onClick={toggleSound}
+              title={isMuted ? 'Activer le son' : 'Couper le son'}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+            >
+              {isMuted ? <VolumeX className="w-4 h-4 text-zinc-400" /> : <Volume2 className="w-4 h-4 text-orange-500" />}
+            </button>
+
             {/* Mode Switcher */}
             <div className="flex bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-lg text-xs font-medium">
               <button
@@ -169,7 +196,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
               <div className="w-full bg-zinc-900 dark:bg-black text-zinc-100 rounded-xl p-4 md:p-5 mb-6 text-left border border-zinc-800 shadow-inner relative group">
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 mb-1 flex items-center justify-between">
                   <span>Texte cible à ancrer (21x)</span>
-                  <span className="text-orange-400">Répétition {repCount + 1} / 21</span>
+                  <span className="text-orange-400 font-mono">Répétition {repCount + 1} / 21</span>
                 </div>
                 <div className="font-mono text-sm md:text-base text-amber-300 font-semibold select-all break-all">
                   {item.target_text}
@@ -226,8 +253,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                     />
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-left">
-                    ⚡ <strong>Astuce :</strong> Dès que tu as tapé le texte exact, le compteur
-                    s&apos;incrémente et le champ se vide automatiquement pour la répétition suivante.
+                    ⚡ <strong>Automatisme :</strong> Dès que le texte correspond, le champ s&apos;efface et le compteur s&apos;incrémente.
                   </p>
                 </div>
               ) : (
@@ -259,22 +285,38 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
-              <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mb-2">
+              <h3 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mb-1">
                 21 Répétitions Validées !
               </h3>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-md mb-6">
-                Bravo ! L&apos;ancrage neurologique et musculaire pour aujourd&apos;hui est terminé.
+                L&apos;ancrage neurologique et musculaire pour aujourd&apos;hui est terminé.
               </p>
 
-              {/* Streak summary */}
-              <div className="flex items-center gap-4 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/40 rounded-xl px-5 py-3 mb-8">
-                <Flame className="w-6 h-6 text-orange-500" />
-                <div className="text-left">
-                  <div className="text-xs text-orange-700 dark:text-orange-400 font-medium">
-                    Progression de la série
+              {/* Stats badges */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 mb-8 w-full max-w-md">
+                {/* Streak */}
+                <div className="flex-1 flex items-center gap-3 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/40 rounded-xl px-4 py-3 w-full">
+                  <Flame className="w-5 h-5 text-orange-500 shrink-0" />
+                  <div className="text-left">
+                    <div className="text-[11px] text-orange-700 dark:text-orange-400 font-semibold uppercase tracking-wider">
+                      Série consécutive
+                    </div>
+                    <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      Jour {currentStreak + 1} / {item.target_days}
+                    </div>
                   </div>
-                  <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                    Jour {currentStreak + 1} validé sur {item.target_days} jours cibles
+                </div>
+
+                {/* Speed / Timer */}
+                <div className="flex-1 flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 w-full">
+                  <Timer className="w-5 h-5 text-sky-500 shrink-0" />
+                  <div className="text-left">
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                      Temps total
+                    </div>
+                    <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      {elapsedSeconds} secondes
+                    </div>
                   </div>
                 </div>
               </div>
@@ -284,6 +326,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                   onClick={() => {
                     setRepCount(0);
                     setIsFinished(false);
+                    setStartTime(Date.now());
                   }}
                   className="flex-1 py-2.5 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
                 >

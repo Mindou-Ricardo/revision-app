@@ -13,6 +13,7 @@ import { Header } from '@/components/Header';
 import { ItemCard } from '@/components/ItemCard';
 import { DrillModal } from '@/components/DrillModal';
 import { ItemFormModal } from '@/components/ItemFormModal';
+import { StarterPacksModal } from '@/components/StarterPacksModal';
 import {
   Search,
   Flame,
@@ -22,6 +23,7 @@ import {
   ExternalLink,
   Plus,
   Layers,
+  Package,
 } from 'lucide-react';
 
 export default function Home() {
@@ -37,6 +39,7 @@ export default function Home() {
   // Modals state
   const [activeDrillItem, setActiveDrillItem] = useState<Item | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isPacksModalOpen, setIsPacksModalOpen] = useState<boolean>(false);
 
   // Charger les données au démarrage
   useEffect(() => {
@@ -61,6 +64,17 @@ export default function Home() {
   ) => {
     const created = await saveNewItem(newItemData);
     setItems((prev) => [created, ...prev]);
+  };
+
+  const handleImportPack = async (
+    packItems: Array<Omit<Item, 'id' | 'created_at' | 'progress'>>
+  ) => {
+    const addedItems: Item[] = [];
+    for (const itemData of packItems) {
+      const created = await saveNewItem(itemData);
+      addedItems.push(created);
+    }
+    setItems((prev) => [...addedItems, ...prev]);
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -119,6 +133,7 @@ export default function Home() {
       {/* Top Header */}
       <Header
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenPacksModal={() => setIsPacksModalOpen(true)}
         isSupabase={isSupabase}
         totalCards={totalCount}
         completedTodayCount={completedTodayCount}
@@ -163,7 +178,7 @@ export default function Home() {
             </div>
 
             {/* Quick stats pills */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setFilterTab('all')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -249,15 +264,24 @@ export default function Home() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-4">
               {searchQuery
                 ? 'Aucun résultat ne correspond à ta recherche.'
-                : 'Commence par ajouter ta première commande ou définition à répéter 21 fois.'}
+                : 'Commence par ajouter ta première commande ou importe un pack thématique.'}
             </p>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Créer une notion</span>
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => setIsPacksModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 font-medium text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-2xs"
+              >
+                <Package className="w-4 h-4 text-orange-500" />
+                <span>Packs thématiques</span>
+              </button>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Créer une notion</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -287,6 +311,13 @@ export default function Home() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleAddNewItem}
+      />
+
+      {/* Starter Packs Modal */}
+      <StarterPacksModal
+        isOpen={isPacksModalOpen}
+        onClose={() => setIsPacksModalOpen(false)}
+        onImportPack={handleImportPack}
       />
     </div>
   );

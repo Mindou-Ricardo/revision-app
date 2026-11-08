@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Flame, Plus, Database, Laptop, Sparkles } from 'lucide-react';
+import { Flame, Plus, Database, Laptop, Package } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
+  onOpenPacksModal: () => void;
   isSupabase: boolean;
   totalCards: number;
   completedTodayCount: number;
@@ -12,6 +13,7 @@ interface HeaderProps {
 
 export function Header({
   onOpenAddModal,
+  onOpenPacksModal,
   isSupabase,
   totalCards,
   completedTodayCount,
@@ -42,7 +44,7 @@ export function Header({
         </div>
 
         {/* Status & Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Storage Mode indicator */}
           <div
             title={
@@ -66,12 +68,22 @@ export function Header({
           </div>
 
           {/* Daily completion badge */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200/60 dark:border-orange-900/40 text-xs font-semibold text-orange-700 dark:text-orange-300">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200/60 dark:border-orange-900/40 text-xs font-semibold text-orange-700 dark:text-orange-300">
             <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
             <span>
-              Aujourd&apos;hui : {completedTodayCount}/{totalCards} ({percentToday}%)
+              {completedTodayCount}/{totalCards} ({percentToday}%)
             </span>
           </div>
+
+          {/* Starter Packs Button */}
+          <button
+            onClick={onOpenPacksModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 text-zinc-700 dark:text-zinc-200 font-medium text-xs sm:text-sm rounded-lg shadow-2xs transition-all"
+            title="Importer des packs de commandes (Git, Linux, Docker...)"
+          >
+            <Package className="w-4 h-4 text-orange-500" />
+            <span className="hidden md:inline">Packs thématiques</span>
+          </button>
 
           {/* New Item Button */}
           <button
