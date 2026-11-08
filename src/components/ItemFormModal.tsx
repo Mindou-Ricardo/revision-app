@@ -9,11 +9,12 @@ interface ItemFormModalProps {
   onClose: () => void;
   onSave: (itemData: Omit<Item, 'id' | 'created_at' | 'progress'>) => Promise<void>;
   initialData?: Item | null;
+  defaultCategory?: string;
 }
 
 const POPULAR_CATEGORIES = ['Linux', 'Git', 'Docker', 'SQL', 'TypeScript', 'Réseau', 'Architecture'];
 
-export function ItemFormModal({ isOpen, onClose, onSave, initialData }: ItemFormModalProps) {
+export function ItemFormModal({ isOpen, onClose, onSave, initialData, defaultCategory }: ItemFormModalProps) {
   const [title, setTitle] = useState('');
   const [targetText, setTargetText] = useState('');
   const [type, setType] = useState<ItemType>('command');
@@ -41,12 +42,18 @@ export function ItemFormModal({ isOpen, onClose, onSave, initialData }: ItemForm
       setTitle('');
       setTargetText('');
       setType('command');
-      setCategory('Linux');
-      setCustomCategory('');
+      const catToUse = defaultCategory || 'Linux';
+      if (POPULAR_CATEGORIES.includes(catToUse)) {
+        setCategory(catToUse);
+        setCustomCategory('');
+      } else {
+        setCategory('Autre');
+        setCustomCategory(catToUse);
+      }
       setTargetDays(7);
       setExplanation('');
     }
-  }, [initialData, isOpen]);
+  }, [initialData, defaultCategory, isOpen]);
 
   if (!isOpen) return null;
 

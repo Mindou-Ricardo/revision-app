@@ -12,6 +12,7 @@ import {
   exportDataAsJSON,
 } from '@/lib/storage';
 import { Header } from '@/components/Header';
+import { FolderCard } from '@/components/FolderCard';
 import { ItemCard } from '@/components/ItemCard';
 import { DrillModal } from '@/components/DrillModal';
 import { ItemFormModal } from '@/components/ItemFormModal';
@@ -28,6 +29,9 @@ import {
   Package,
   Download,
   Upload,
+  ArrowLeft,
+  FolderOpen,
+  FolderPlus,
   Box,
   GitBranch,
   Terminal,
@@ -41,8 +45,10 @@ export default function Home() {
   const [isSupabase, setIsSupabase] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Navigation par répertoires
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+
   // Filters & Search
-  const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [filterTab, setFilterTab] = useState<'all' | 'todo' | 'done'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +65,7 @@ export default function Home() {
     loadData();
   }, []);
 
-  // Raccourcis clavier globaux (/, n, p)
+  // Raccourcis clavier globaux (/, n, p, Echap)
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
@@ -75,12 +81,14 @@ export default function Home() {
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         setIsPacksModalOpen(true);
+      } else if (e.key === 'Escape' && selectedFolder) {
+        setSelectedFolder(null);
       }
     };
 
     window.addEventListener('keydown', handleGlobalKeys);
     return () => window.removeEventListener('keydown', handleGlobalKeys);
-  }, []);
+  }, [selectedFolder]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -129,7 +137,7 @@ export default function Home() {
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (confirm('Supprimer cette notion de ta liste ?')) {
+    if (confirm('Supprimer cette notion ?')) {
       await removeItem(itemId);
       setItems((prev) => prev.filter((item) => item.id !== itemId));
     }
@@ -176,61 +184,72 @@ export default function Home() {
     }
   };
 
-  // Extraire les catégories uniques
-  const categories = useMemo(() => {
-    return ['Tous', ...Array.from(new Set(items.map((i) => i.category)))];
+  // Regroupement de tous les items par Répertoire (Catégorie)
+  const foldersMap = useMemo(() => {
+    const map: Record<string, Item[]> = {};
+    for (const item of items) {
+      const cat = item.category || 'Général';
+      if (!map[cat]) map[cat] = [];
+      map[cat].push(item);
+    }
+    return map;
   }, [items]);
 
-  // Calculs statistiques
-  const totalCount = items.length;
-  const completedTodayCount = items.filter((i) =>
-    isCompletedToday(i.progress?.last_completed_date)
-  ).length;
-  const todoTodayCount = totalCount - completedTodayCount;
+  // Liste des répertoires filtrée par recherche sur l'accueil
+  const filteredFolders = useMemo(() => {
+    const folderNames = Object.keys(foldersMap);
+    if (!searchQuery.trim()) return folderNames;
+    const q = searchQuery.toLowerCase();
+    return folderNames.filter(
+      (name) =>
+        name.toLowerCase().includes(q) ||
+        foldersMap[name].some(
+          (i) =>
+            i.title.toLowerCase().includes(q) ||
+            i.target_text.toLowerCase().includes(q)
+        )
+    );
+  }, [foldersMap, searchQuery]);
 
-  // Filtrage
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+  // Liste des items dans le dossier sélectionné
+  const folderItems = useMemo(() => {
+    if (!selectedFolder) return [];
+    const list = foldersMap[selectedFolder] || [];
+    return list.filter((item) => {
       const isDone = isCompletedToday(item.progress?.last_completed_date);
-
       if (filterTab === 'todo' && isDone) return false;
       if (filterTab === 'done' && !isDone) return false;
-
-      if (selectedCategory !== 'Tous' && item.category !== selectedCategory) {
-        return false;
-      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = item.title.toLowerCase().includes(q);
         const matchText = item.target_text.toLowerCase().includes(q);
-        const matchCat = item.category.toLowerCase().includes(q);
-        if (!matchTitle && !matchText && !matchCat) return false;
+        if (!matchTitle && !matchText) return false;
       }
-
       return true;
     });
-  }, [items, filterTab, selectedCategory, searchQuery]);
+  }, [foldersMap, selectedFolder, filterTab, searchQuery]);
 
-  // Regroupement par Catégorie (Groupes)
-  const groupedItems = useMemo(() => {
-    const groups: Record<string, Item[]> = {};
-    for (const item of filteredItems) {
-      const cat = item.category || 'Général';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
-    }
-    return groups;
-  }, [filteredItems]);
+  // Statistiques globales
+  const totalCount = items.length;
+  const completedTodayCount = items.filter((i) =>
+    isCompletedToday(i.progress?.last_completed_date)
+  ).length;
 
-  const getCategoryIcon = (categoryName: string) => {
+  // Statistiques du dossier sélectionné
+  const selectedFolderAllItems = selectedFolder ? foldersMap[selectedFolder] || [] : [];
+  const selectedFolderDoneCount = selectedFolderAllItems.filter((i) =>
+    isCompletedToday(i.progress?.last_completed_date)
+  ).length;
+
+  const getFolderIcon = (categoryName: string) => {
     const lower = categoryName.toLowerCase();
-    if (lower.includes('docker')) return <Box className="w-4 h-4 text-blue-500" />;
-    if (lower.includes('git')) return <GitBranch className="w-4 h-4 text-blue-500" />;
-    if (lower.includes('linux')) return <Terminal className="w-4 h-4 text-blue-400" />;
-    if (lower.includes('sql') || lower.includes('base')) return <Database className="w-4 h-4 text-blue-500" />;
-    if (lower.includes('archi') || lower.includes('déf')) return <BookOpen className="w-4 h-4 text-blue-400" />;
-    return <Folder className="w-4 h-4 text-blue-500" />;
+    if (lower.includes('docker')) return <Box className="w-5 h-5 text-blue-500" />;
+    if (lower.includes('git')) return <GitBranch className="w-5 h-5 text-blue-500" />;
+    if (lower.includes('linux')) return <Terminal className="w-5 h-5 text-blue-400" />;
+    if (lower.includes('sql') || lower.includes('base')) return <Database className="w-5 h-5 text-blue-500" />;
+    if (lower.includes('archi') || lower.includes('déf')) return <BookOpen className="w-5 h-5 text-blue-400" />;
+    return <Folder className="w-5 h-5 text-blue-500" />;
   };
 
   return (
@@ -270,203 +289,266 @@ export default function Home() {
           </div>
         )}
 
-        {/* Hero Section / Summary */}
-        <section className="mb-6 sm:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-                Tableau de bord des révisions
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 sm:mt-1">
-                La règle des 21 : Répète chaque commande ou notion 21 fois par jour pour forcer
-                l&apos;ancrage réflexe.
-              </p>
+        {/* ------------------------------------------------------------- */}
+        {/* VUE 1 : ACCUEIL — QUE LES RÉPERTOIRES (FOLDERS)               */}
+        {/* ------------------------------------------------------------- */}
+        {!selectedFolder ? (
+          <div>
+            {/* Hero / Header Accueil Répertoires */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2.5">
+                  <span>Mes Répertoires de Révision</span>
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                  Chaque répertoire regroupe les notions et commandes d&apos;une technologie. Choisis un répertoire pour t&apos;entraîner.
+                </p>
+              </div>
+
+              {/* Actions Rapides */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setIsPacksModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold text-xs shadow-2xs flex items-center gap-1.5 transition-all"
+                >
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span>Importer un Pack</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setIsAddModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-sm shadow-blue-600/25 flex items-center gap-1.5 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nouveau Répertoire / Notion</span>
+                </button>
+              </div>
             </div>
 
-            {/* Quick stats pills */}
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => setFilterTab('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                  filterTab === 'all'
-                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-2xs'
-                    : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Toutes ({totalCount})</span>
-              </button>
+            {/* Search & Backup Bar */}
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <div className="relative w-full max-w-sm">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher un répertoire ou une commande... (Tape /)"
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-              <button
-                onClick={() => setFilterTab('todo')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                  filterTab === 'todo'
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
-                    : 'bg-zinc-50 dark:bg-zinc-900 text-blue-600 dark:text-blue-400 border border-zinc-200 dark:border-zinc-800'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 fill-current" />
-                <span>À faire ({todoTodayCount})</span>
-              </button>
-
-              <button
-                onClick={() => setFilterTab('done')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                  filterTab === 'done'
-                    ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs'
-                    : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800'
-                }`}
-              >
-                <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
-                <span>Validées ({completedTodayCount})</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Filter bar, Search & Export/Import */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
-          {/* Categories horizontal scroll */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-blue-600 text-white font-semibold shadow-2xs'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Search box & JSON Export/Import */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher... (Tape /)"
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              {/* Import / Export JSON */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".json"
+                  onChange={handleFileImport}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Importer un fichier JSON"
+                  className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => exportDataAsJSON(items)}
+                  title="Sauvegarder tout en JSON"
+                  className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Hidden JSON file input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".json"
-              onChange={handleFileImport}
-              className="hidden"
-            />
-
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              title="Importer des notions depuis un fichier JSON"
-              className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
-            >
-              <Upload className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => exportDataAsJSON(items)}
-              title="Exporter mes notions en JSON (Sauvegarde)"
-              className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content: Grouped by Category */}
-        {isLoading ? (
-          <div className="py-20 text-center text-zinc-400 text-sm">
-            Chargement de tes notions...
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-zinc-50/50 dark:bg-zinc-900/30 p-8">
-            <Clock className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
-            <h3 className="font-bold text-zinc-700 dark:text-zinc-300 text-base mb-1">
-              Aucune notion trouvée
-            </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-4">
-              {searchQuery
-                ? 'Aucun résultat ne correspond à ta recherche.'
-                : 'Commence par ajouter ta première commande ou importe un pack thématique.'}
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => setIsPacksModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 font-medium text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-2xs"
-              >
-                <Package className="w-4 h-4 text-blue-500" />
-                <span>Packs thématiques</span>
-              </button>
-              <button
-                onClick={() => {
-                  setEditingItem(null);
-                  setIsAddModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm shadow-blue-600/20"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Créer une notion</span>
-              </button>
-            </div>
+            {/* Grille des Répertoires uniquement */}
+            {isLoading ? (
+              <div className="py-20 text-center text-zinc-400 text-sm">
+                Chargement de tes répertoires...
+              </div>
+            ) : filteredFolders.length === 0 ? (
+              <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-zinc-50/50 dark:bg-zinc-900/30 p-8">
+                <FolderOpen className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+                <h3 className="font-bold text-zinc-700 dark:text-zinc-300 text-base mb-1">
+                  Aucun répertoire trouvé
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-4">
+                  {searchQuery
+                    ? 'Aucun répertoire ne correspond à ta recherche.'
+                    : 'Commence par créer ton premier répertoire ou importer un pack thématique.'}
+                </p>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm shadow-blue-600/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Créer un premier répertoire</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredFolders.map((folderName) => (
+                  <FolderCard
+                    key={folderName}
+                    name={folderName}
+                    items={foldersMap[folderName] || []}
+                    onOpen={(name) => {
+                      setSelectedFolder(name);
+                      setSearchQuery('');
+                      setFilterTab('all');
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          /* Render by Category Groups */
-          <div className="space-y-8">
-            {Object.entries(groupedItems).map(([groupCategory, groupList]) => {
-              const groupDoneCount = groupList.filter((i) =>
-                isCompletedToday(i.progress?.last_completed_date)
-              ).length;
-              const groupTotal = groupList.length;
+          /* ------------------------------------------------------------- */
+          /* VUE 2 : À L'INTÉRIEUR DU RÉPERTOIRE SÉLECTIONNÉ               */
+          /* ------------------------------------------------------------- */
+          <div>
+            {/* Bouton Retour aux Répertoires */}
+            <button
+              onClick={() => {
+                setSelectedFolder(null);
+                setSearchQuery('');
+              }}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline mb-4 group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              <span>← Retour à tous les répertoires</span>
+            </button>
 
-              return (
-                <section key={groupCategory} className="space-y-3">
-                  {/* Group Header */}
-                  <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/50 dark:border-blue-900/40">
-                        {getCategoryIcon(groupCategory)}
-                      </div>
-                      <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100 tracking-tight">
-                        {groupCategory}
-                      </h3>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                        {groupTotal}
-                      </span>
-                    </div>
-
-                    <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <span className={groupDoneCount === groupTotal ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''}>
-                        {groupDoneCount}/{groupTotal} fait aujourd&apos;hui
-                      </span>
-                    </div>
+            {/* Folder Header Banner */}
+            <div className="bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 mb-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xs">
+                    {getFolderIcon(selectedFolder)}
                   </div>
-
-                  {/* Grid of Cards for this Group */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {groupList.map((item) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        onStartDrill={(target) => setActiveDrillItem(target)}
-                        onDelete={handleDeleteItem}
-                        onEdit={handleEditItem}
-                      />
-                    ))}
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+                      {selectedFolder}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      {selectedFolderAllItems.length} notion(s) • {selectedFolderDoneCount} validée(s) aujourd&apos;hui
+                    </p>
                   </div>
-                </section>
-              );
-            })}
+                </div>
+
+                {/* Actions inside folder */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setIsAddModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-sm shadow-blue-600/25 flex items-center gap-1.5 transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Ajouter dans {selectedFolder}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Filtres internes au répertoire */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
+              {/* Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <button
+                  onClick={() => setFilterTab('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                    filterTab === 'all'
+                      ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-2xs'
+                      : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Toutes ({selectedFolderAllItems.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setFilterTab('todo')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                    filterTab === 'todo'
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                      : 'bg-zinc-50 dark:bg-zinc-900 text-blue-600 dark:text-blue-400 border border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>À faire ({selectedFolderAllItems.length - selectedFolderDoneCount})</span>
+                </button>
+
+                <button
+                  onClick={() => setFilterTab('done')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap ${
+                    filterTab === 'done'
+                      ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs'
+                      : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Validées ({selectedFolderDoneCount})</span>
+                </button>
+              </div>
+
+              {/* Search in this folder */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`Chercher dans ${selectedFolder}...`}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Grille des notions du dossier sélectionné */}
+            {folderItems.length === 0 ? (
+              <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl bg-zinc-50/50 dark:bg-zinc-900/30 p-8">
+                <Clock className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+                <h3 className="font-bold text-zinc-700 dark:text-zinc-300 text-base mb-1">
+                  Aucune notion dans ce répertoire
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-4">
+                  {searchQuery
+                    ? 'Aucun résultat ne correspond à ta recherche.'
+                    : `Ajoute ta première commande ou définition dans le dossier ${selectedFolder}.`}
+                </p>
+                <button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setIsAddModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm shadow-blue-600/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Ajouter une notion</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {folderItems.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onStartDrill={(target) => setActiveDrillItem(target)}
+                    onDelete={handleDeleteItem}
+                    onEdit={handleEditItem}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -484,6 +566,7 @@ export default function Home() {
       <ItemFormModal
         isOpen={isAddModalOpen}
         initialData={editingItem}
+        defaultCategory={selectedFolder || undefined}
         onClose={() => {
           setIsAddModalOpen(false);
           setEditingItem(null);
