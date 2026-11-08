@@ -16,7 +16,6 @@ import { FolderCard } from '@/components/FolderCard';
 import { ItemCard } from '@/components/ItemCard';
 import { DrillModal } from '@/components/DrillModal';
 import { ItemFormModal } from '@/components/ItemFormModal';
-import { StarterPacksModal } from '@/components/StarterPacksModal';
 import {
   Search,
   Zap,
@@ -26,12 +25,10 @@ import {
   ExternalLink,
   Plus,
   Layers,
-  Package,
   Download,
   Upload,
   ArrowLeft,
   FolderOpen,
-  FolderPlus,
   Box,
   GitBranch,
   Terminal,
@@ -58,14 +55,13 @@ export default function Home() {
   const [activeDrillItem, setActiveDrillItem] = useState<Item | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const [isPacksModalOpen, setIsPacksModalOpen] = useState<boolean>(false);
 
   // Charger les données au démarrage
   useEffect(() => {
     loadData();
   }, []);
 
-  // Raccourcis clavier globaux (/, n, p, Echap)
+  // Raccourcis clavier globaux (/, n, Echap)
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
@@ -78,9 +74,6 @@ export default function Home() {
         e.preventDefault();
         setEditingItem(null);
         setIsAddModalOpen(true);
-      } else if (e.key === 'p' || e.key === 'P') {
-        e.preventDefault();
-        setIsPacksModalOpen(true);
       } else if (e.key === 'Escape' && selectedFolder) {
         setSelectedFolder(null);
       }
@@ -123,17 +116,6 @@ export default function Home() {
   const handleEditItem = (item: Item) => {
     setEditingItem(item);
     setIsAddModalOpen(true);
-  };
-
-  const handleImportPack = async (
-    packItems: Array<Omit<Item, 'id' | 'created_at' | 'progress'>>
-  ) => {
-    const addedItems: Item[] = [];
-    for (const itemData of packItems) {
-      const created = await saveNewItem(itemData);
-      addedItems.push(created);
-    }
-    setItems((prev) => [...addedItems, ...prev]);
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -260,7 +242,6 @@ export default function Home() {
           setEditingItem(null);
           setIsAddModalOpen(true);
         }}
-        onOpenPacksModal={() => setIsPacksModalOpen(true)}
         isSupabase={isSupabase}
         totalCards={totalCount}
         completedTodayCount={completedTodayCount}
@@ -303,17 +284,6 @@ export default function Home() {
                 <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                   Chaque répertoire regroupe les notions et commandes d&apos;une technologie. Choisis un répertoire pour t&apos;entraîner.
                 </p>
-              </div>
-
-              {/* Actions Rapides */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => setIsPacksModalOpen(true)}
-                  className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold text-xs shadow-2xs flex items-center gap-1.5 transition-all"
-                >
-                  <Package className="w-4 h-4 text-blue-500" />
-                  <span>Importer un Pack thématique</span>
-                </button>
               </div>
             </div>
 
@@ -561,13 +531,6 @@ export default function Home() {
           setEditingItem(null);
         }}
         onSave={handleSaveItem}
-      />
-
-      {/* Starter Packs Modal */}
-      <StarterPacksModal
-        isOpen={isPacksModalOpen}
-        onClose={() => setIsPacksModalOpen(false)}
-        onImportPack={handleImportPack}
       />
     </div>
   );

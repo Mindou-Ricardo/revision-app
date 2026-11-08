@@ -1,12 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Zap, Plus, Database, Laptop, Package } from 'lucide-react';
+import { Zap, Plus, Database, Laptop } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
-  onOpenPacksModal: () => void;
   isSupabase: boolean;
   totalCards: number;
   completedTodayCount: number;
@@ -14,7 +13,6 @@ interface HeaderProps {
 
 export function Header({
   onOpenAddModal,
-  onOpenPacksModal,
   isSupabase,
   totalCards,
   completedTodayCount,
@@ -78,16 +76,6 @@ export function Header({
               {completedTodayCount}/{totalCards} ({percentToday}%)
             </span>
           </div>
-
-          {/* Starter Packs Button */}
-          <button
-            onClick={onOpenPacksModal}
-            className="p-2 sm:px-3 sm:py-1.5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-95 text-zinc-700 dark:text-zinc-200 font-medium text-xs sm:text-sm rounded-lg shadow-2xs transition-all flex items-center gap-1.5"
-            title="Packs de notions (Git, Linux, Docker...)"
-          >
-            <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="hidden sm:inline">Packs</span>
-          </button>
 
           {/* New Item Button */}
           <button
