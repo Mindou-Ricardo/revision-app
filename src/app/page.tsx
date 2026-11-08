@@ -64,6 +64,7 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [isSupabase, setIsSupabase] = useState<boolean>(isSupabaseConfigured);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Navigation par répertoires
   const [selectedFolder, setSelectedFolderState] = useState<string | null>(null);
@@ -101,7 +102,10 @@ export default function Home() {
           setSelectedFolderState(savedFolder);
         }
       })
-      .catch((e) => console.error(e))
+      .catch((e) => {
+        console.error(e);
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Erreur inconnue');
+      })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
@@ -401,6 +405,24 @@ export default function Home() {
             <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
             <span>Chargement de tes répertoires...</span>
           </div>
+        ) : loadError ? (
+          <div
+            role="alert"
+            className="py-16 text-center border border-rose-200 dark:border-rose-900/50 rounded-3xl bg-rose-50/60 dark:bg-rose-950/20 p-8"
+          >
+            <h3 className="font-bold text-rose-700 dark:text-rose-300 text-base mb-1">
+              Impossible de charger tes répertoires
+            </h3>
+            <p className="text-xs text-rose-600/80 dark:text-rose-400/80 max-w-md mx-auto mb-4 break-words">
+              {loadError}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs"
+            >
+              Réessayer
+            </button>
+          </div>
         ) : !selectedFolder ? (
           <div>
             {/* Hero / Header Accueil Répertoires */}
@@ -465,7 +487,7 @@ export default function Home() {
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-4">
                   {searchQuery
                     ? 'Aucun répertoire ne correspond à ta recherche.'
-                    : 'Commence par créer ton premier répertoire ou importer un pack thématique.'}
+                    : 'Commence par créer ton premier répertoire ou importer un fichier JSON.'}
                 </p>
                 <button
                   onClick={() => {

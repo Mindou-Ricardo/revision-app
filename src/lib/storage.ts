@@ -105,69 +105,26 @@ function writeLocalItems(items: Item[]): void {
 
 const SELECT_WITH_PROGRESS = '*, progress:item_progress(*)';
 
-async function fetchFromSupabase(): Promise<Item[] | null> {
-  const supabase = createClient();
-  if (!supabase) return null;
-
-  try {
-    const { data, error } = await supabase
-      .from('items')
-      .select(SELECT_WITH_PROGRESS)
-      .order('created_at', { ascending: false });
-
-    if (error || !data) {
-      console.warn('Erreur Supabase, bascule sur localStorage :', error);
-      return null;
-    }
-
-    if (data.length > 0) return data.map(mapRow);
-
-    // Base vide : insérer les notions d'exemple
-    for (const item of DEFAULT_ITEMS) {
-      const { data: inserted } = await supabase
-        .from('items')
-        .insert({
-          title: item.title,
-          target_text: item.target_text,
-          type: item.type,
-          category: item.category,
-          target_days: item.target_days,
-          explanation: item.explanation,
-        })
-        .select()
-        .single();
-
-      if (inserted) {
-        await supabase.from('item_progress').insert({
-          item_id: inserted.id,
-          current_streak: 0,
-          total_repetitions: 0,
-          is_mastered: false,
-        });
-      }
-    }
-
-    const { data: seeded } = await supabase
-      .from('items')
-      .select(SELECT_WITH_PROGRESS)
-      .order('created_at', { ascending: false });
-
-    return (seeded ?? []).map(mapRow);
-  } catch (e) {
-    console.warn('Erreur Supabase, bascule sur localStorage :', e);
-    return null;
-  }
-}
-
-// Déduplique les appels simultanés (ex. double montage du Strict Mode en dev),
-// sinon les notions d'exemple seraient insérées deux fois dans une base vide.
+// Déduplique les appels simultanés (ex. double montage du Strict Mode en dev).
 let inFlightFetch: Promise<{ items: Item[]; isSupabase: boolean }> | null = null;
 
+/**
+ * Mode Supabase : notions de l'utilisateur connecté (filtrées par RLS).
+ * Une erreur est remontée — pas de bascule silencieuse vers le localStorage.
+ * Mode local (Supabase non configuré) : localStorage, avec des exemples au premier lancement.
+ */
 export function fetchItems(): Promise<{ items: Item[]; isSupabase: boolean }> {
   if (!inFlightFetch) {
     inFlightFetch = (async () => {
-      const remote = await fetchFromSupabase();
-      if (remote) return { items: remote, isSupabase: true };
+      const supabase = createClient();
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('items')
+          .select(SELECT_WITH_PROGRESS)
+          .order('created_at', { ascending: false });
+        if (error) throw new Error(error.message);
+        return { items: (data ?? []).map(mapRow), isSupabase: true };
+      }
 
       const local = readLocalItems();
       if (local) return { items: local, isSupabase: false };
