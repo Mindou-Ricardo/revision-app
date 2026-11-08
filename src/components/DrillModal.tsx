@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { Item, DrillMode } from '@/types';
 import { sound } from '@/lib/sound';
 import confetti from 'canvas-confetti';
@@ -21,17 +21,11 @@ interface DrillModalProps {
   item: Item;
   onClose: () => void;
   onSessionComplete: (itemId: string, mode: DrillMode) => void;
-  onNextItem?: () => void;
-  hasNextItem?: boolean;
 }
 
-export function DrillModal({
-  item,
-  onClose,
-  onSessionComplete,
-  onNextItem,
-  hasNextItem,
-}: DrillModalProps) {
+const TARGET_REPS = 21;
+
+export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps) {
   const [repCount, setRepCount] = useState<number>(0);
   const [mode, setMode] = useState<DrillMode>(item.type === 'command' ? 'typing' : 'verbal');
   const [typedInput, setTypedInput] = useState<string>('');
@@ -44,7 +38,6 @@ export function DrillModal({
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const TARGET_REPS = 21;
 
   // Prononciation vocale (Text-to-Speech natif)
   const speakTargetText = () => {
@@ -55,30 +48,6 @@ export function DrillModal({
     utterance.rate = 0.95;
     window.speechSynthesis.speak(utterance);
   };
-
-  // Auto-focus l'input à l'ouverture
-  useEffect(() => {
-    if (mode === 'typing' && !isFinished) {
-      inputRef.current?.focus();
-    }
-  }, [mode, isFinished]);
-
-  // Raccourci clavier Espace pour le mode oral
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isFinished) return;
-
-      if (mode === 'verbal') {
-        if (e.code === 'Space' || e.code === 'Enter') {
-          e.preventDefault();
-          incrementRepetition();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, repCount, isFinished]);
 
   const toggleSound = () => {
     const muted = sound.toggleMute();
@@ -119,6 +88,28 @@ export function DrillModal({
       onSessionComplete(item.id, mode);
     }
   };
+
+  // Auto-focus l'input à l'ouverture
+  useEffect(() => {
+    if (mode === 'typing' && !isFinished) {
+      inputRef.current?.focus();
+    }
+  }, [mode, isFinished]);
+
+  // Raccourci clavier Espace / Entrée pour le mode oral.
+  // useEffectEvent lit toujours l'état le plus récent sans ré-abonner l'écouteur.
+  const onWindowKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    if (isFinished || mode !== 'verbal') return;
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      incrementRepetition();
+    }
+  });
+
+  useEffect(() => {
+    window.addEventListener('keydown', onWindowKeyDown);
+    return () => window.removeEventListener('keydown', onWindowKeyDown);
+  }, []);
 
   // Gestion de la frappe en temps réel
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,28 +352,13 @@ export function DrillModal({
                   <RotateCcw className="w-4 h-4" />
                   <span>Refaire une série</span>
                 </button>
-                {hasNextItem && onNextItem ? (
-                  <button
-                    onClick={() => {
-                      setRepCount(0);
-                      setIsFinished(false);
-                      setStartTime(Date.now());
-                      onNextItem();
-                    }}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <span>Notion suivante</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={onClose}
-                    className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <span>Terminer</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>Terminer</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}

@@ -3,18 +3,8 @@
 import React from 'react';
 import { Item } from '@/types';
 import { isCompletedToday } from '@/lib/storage';
-import {
-  Folder,
-  FolderOpen,
-  ArrowRight,
-  CheckCircle2,
-  Zap,
-  Box,
-  GitBranch,
-  Terminal,
-  BookOpen,
-  Database,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle2, Zap } from 'lucide-react';
+import { FolderIcon } from './FolderIcon';
 
 interface FolderCardProps {
   name: string;
@@ -30,16 +20,6 @@ export function FolderCard({ name, items, onOpen }: FolderCardProps) {
   const isAllDone = total > 0 && completedToday === total;
   const progressPercent = total > 0 ? Math.round((completedToday / total) * 100) : 0;
 
-  const getFolderIcon = (folderName: string) => {
-    const lower = folderName.toLowerCase();
-    if (lower.includes('docker')) return <Box className="w-6 h-6 text-blue-500" />;
-    if (lower.includes('git')) return <GitBranch className="w-6 h-6 text-blue-500" />;
-    if (lower.includes('linux')) return <Terminal className="w-6 h-6 text-blue-400" />;
-    if (lower.includes('sql') || lower.includes('base')) return <Database className="w-6 h-6 text-blue-500" />;
-    if (lower.includes('archi') || lower.includes('déf')) return <BookOpen className="w-6 h-6 text-blue-400" />;
-    return <Folder className="w-6 h-6 text-blue-500" />;
-  };
-
   return (
     <div
       onClick={() => onOpen(name)}
@@ -49,7 +29,7 @@ export function FolderCard({ name, items, onOpen }: FolderCardProps) {
         {/* Top bar with Icon and Notion Count */}
         <div className="flex items-center justify-between mb-4">
           <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/50 dark:border-blue-900/40 group-hover:scale-105 transition-transform">
-            {getFolderIcon(name)}
+            <FolderIcon name={name} className="w-6 h-6" />
           </div>
 
           {isAllDone ? (
