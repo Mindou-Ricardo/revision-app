@@ -10,9 +10,8 @@ import {
   Mic,
   RotateCcw,
   CheckCircle2,
-  Sparkles,
   ArrowRight,
-  Flame,
+  Zap,
   Volume2,
   VolumeX,
   Timer,
@@ -74,6 +73,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
         particleCount: 110,
         spread: 75,
         origin: { y: 0.6 },
+        colors: ['#2563eb', '#38bdf8', '#ffffff', '#1e40af'],
       });
     } catch {
       // Ignorer si indisponible
@@ -125,12 +125,12 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
   const currentStreak = item.progress?.current_streak || 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Top Bar */}
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400">
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/50">
               {item.category}
             </span>
             <span className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -145,16 +145,16 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
               title={isMuted ? 'Activer le son' : 'Couper le son'}
               className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
             >
-              {isMuted ? <VolumeX className="w-4 h-4 text-zinc-400" /> : <Volume2 className="w-4 h-4 text-orange-500" />}
+              {isMuted ? <VolumeX className="w-4 h-4 text-zinc-400" /> : <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
             </button>
 
             {/* Mode Switcher */}
-            <div className="flex bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-lg text-xs font-medium">
+            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs font-medium border border-zinc-200/60 dark:border-zinc-700/60">
               <button
                 onClick={() => setMode('typing')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
                   mode === 'typing'
-                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                    ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
                     : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
@@ -165,7 +165,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                 onClick={() => setMode('verbal')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
                   mode === 'verbal'
-                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                    ? 'bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
                     : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
@@ -193,12 +193,12 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
               </h2>
 
               {/* Target Snippet Box */}
-              <div className="w-full bg-zinc-900 dark:bg-black text-zinc-100 rounded-xl p-4 md:p-5 mb-6 text-left border border-zinc-800 shadow-inner relative group">
-                <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 mb-1 flex items-center justify-between">
-                  <span>Texte cible à ancrer (21x)</span>
-                  <span className="text-orange-400 font-mono">Répétition {repCount + 1} / 21</span>
+              <div className="w-full bg-zinc-950 dark:bg-black text-zinc-100 rounded-2xl p-5 mb-6 text-left border border-zinc-800 shadow-inner relative group">
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5 flex items-center justify-between">
+                  <span>Texte cible à répéter (21x)</span>
+                  <span className="text-blue-400 font-mono font-bold">Répétition {repCount + 1} / 21</span>
                 </div>
-                <div className="font-mono text-sm md:text-base text-amber-300 font-semibold select-all break-all">
+                <div className="font-mono text-sm md:text-base text-blue-300 font-semibold select-all break-all">
                   {item.target_text}
                 </div>
                 {item.explanation && (
@@ -212,20 +212,20 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
               <div className="w-full mb-6">
                 <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
                   <span>Progression de la série</span>
-                  <span className="text-orange-600 dark:text-orange-400 font-bold">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">
                     {repCount} / 21 validées ({21 - repCount} restantes)
                   </span>
                 </div>
                 {/* Visual grid of 21 dots */}
-                <div className="grid grid-cols-[repeat(21,minmax(0,1fr))] gap-1 w-full bg-zinc-100 dark:bg-zinc-800/60 p-2 rounded-xl">
+                <div className="grid grid-cols-[repeat(21,minmax(0,1fr))] gap-1 w-full bg-zinc-100 dark:bg-zinc-800/50 p-2 rounded-xl border border-zinc-200/60 dark:border-zinc-800">
                   {Array.from({ length: TARGET_REPS }).map((_, idx) => (
                     <div
                       key={idx}
                       className={`h-4 rounded-xs transition-all duration-300 ${
                         idx < repCount
-                          ? 'bg-orange-500 shadow-xs shadow-orange-500/50 scale-105'
+                          ? 'bg-blue-600 dark:bg-blue-500 shadow-xs shadow-blue-500/50 scale-105'
                           : idx === repCount
-                          ? 'bg-orange-300 dark:bg-orange-800 animate-pulse'
+                          ? 'bg-blue-300 dark:bg-blue-800 animate-pulse'
                           : 'bg-zinc-300 dark:bg-zinc-700'
                       }`}
                       title={`Répétition ${idx + 1}`}
@@ -245,9 +245,9 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                       onChange={handleInputChange}
                       onKeyDown={handleInputKeyDown}
                       placeholder="Tape la commande ou définition exacte ici..."
-                      className={`w-full px-4 py-3.5 font-mono text-sm md:text-base rounded-xl border bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all ${
+                      className={`w-full px-4 py-3.5 font-mono text-sm md:text-base rounded-xl border bg-zinc-50 dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
                         feedbackAnim
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
                           : 'border-zinc-300 dark:border-zinc-700'
                       }`}
                     />
@@ -260,11 +260,11 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                 <div className="w-full flex flex-col items-center">
                   <button
                     onClick={incrementRepetition}
-                    className="w-full py-5 px-6 rounded-xl bg-orange-600 hover:bg-orange-500 active:scale-98 text-white font-bold text-lg shadow-lg shadow-orange-600/30 flex items-center justify-center gap-3 transition-all"
+                    className="w-full py-5 px-6 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-98 text-white font-bold text-lg shadow-lg shadow-blue-600/30 flex items-center justify-center gap-3 transition-all"
                   >
                     <Volume2 className="w-6 h-6" />
                     <span>J&apos;ai répété 1 fois</span>
-                    <span className="text-xs bg-orange-700/60 px-2 py-1 rounded font-mono">
+                    <span className="text-xs bg-blue-700/80 px-2 py-1 rounded font-mono">
                       Espace / Entrée
                     </span>
                   </button>
@@ -281,7 +281,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
           ) : (
             /* Celebration Screen when 21 reps are completed */
             <div className="py-6 flex flex-col items-center animate-in zoom-in-95 duration-300">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
+              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
@@ -295,10 +295,10 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
               {/* Stats badges */}
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-8 w-full max-w-md">
                 {/* Streak */}
-                <div className="flex-1 flex items-center gap-3 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/40 rounded-xl px-4 py-3 w-full">
-                  <Flame className="w-5 h-5 text-orange-500 shrink-0" />
+                <div className="flex-1 flex items-center gap-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 rounded-2xl px-4 py-3 w-full">
+                  <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 fill-current" />
                   <div className="text-left">
-                    <div className="text-[11px] text-orange-700 dark:text-orange-400 font-semibold uppercase tracking-wider">
+                    <div className="text-[11px] text-blue-700 dark:text-blue-400 font-semibold uppercase tracking-wider">
                       Série consécutive
                     </div>
                     <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -308,8 +308,8 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                 </div>
 
                 {/* Speed / Timer */}
-                <div className="flex-1 flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 w-full">
-                  <Timer className="w-5 h-5 text-sky-500 shrink-0" />
+                <div className="flex-1 flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-3 w-full">
+                  <Timer className="w-5 h-5 text-zinc-600 dark:text-zinc-300 shrink-0" />
                   <div className="text-left">
                     <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
                       Temps total
@@ -335,7 +335,7 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                 </button>
                 <button
                   onClick={onClose}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-semibold text-sm shadow-md transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
                 >
                   <span>Terminer</span>
                   <ArrowRight className="w-4 h-4" />

@@ -30,25 +30,25 @@ export function StarterPacksModal({ isOpen, onClose, onImportPack }: StarterPack
   const getPackIcon = (iconName: string) => {
     switch (iconName) {
       case 'GitBranch':
-        return <GitBranch className="w-5 h-5 text-orange-500" />;
+        return <GitBranch className="w-5 h-5 text-blue-500" />;
       case 'Terminal':
-        return <Terminal className="w-5 h-5 text-emerald-500" />;
+        return <Terminal className="w-5 h-5 text-blue-400" />;
       case 'Box':
-        return <Box className="w-5 h-5 text-sky-500" />;
+        return <Box className="w-5 h-5 text-blue-500" />;
       case 'BookOpen':
-        return <BookOpen className="w-5 h-5 text-purple-500" />;
+        return <BookOpen className="w-5 h-5 text-blue-400" />;
       default:
-        return <Package className="w-5 h-5 text-zinc-500" />;
+        return <Package className="w-5 h-5 text-blue-500" />;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <Package className="w-5 h-5 text-orange-500" />
+            <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
               Packs de Révision Thématiques
             </h2>
@@ -74,10 +74,10 @@ export function StarterPacksModal({ isOpen, onClose, onImportPack }: StarterPack
               return (
                 <div
                   key={pack.id}
-                  className="border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 dark:bg-zinc-950/40 flex items-start justify-between gap-4"
+                  className="border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 bg-zinc-50/50 dark:bg-zinc-950/40 flex items-start justify-between gap-4"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-xs">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xs">
                       {getPackIcon(pack.icon)}
                     </div>
                     <div>
@@ -100,13 +100,13 @@ export function StarterPacksModal({ isOpen, onClose, onImportPack }: StarterPack
                     onClick={() => handleImport(pack)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 ${
                       alreadyImported
-                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-orange-600 dark:hover:bg-orange-500 dark:hover:text-white shadow-xs'
+                        ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900'
+                        : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white shadow-2xs'
                     }`}
                   >
                     {alreadyImported ? (
                       <>
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-3.5 h-3.5 text-blue-500" />
                         <span>Importé !</span>
                       </>
                     ) : (

@@ -53,8 +53,8 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
@@ -79,25 +79,25 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
               <button
                 type="button"
                 onClick={() => setType('command')}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
                   type === 'command'
-                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-2xs'
                     : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                 }`}
               >
-                <Terminal className="w-4 h-4" />
+                <Terminal className="w-4 h-4 text-blue-500" />
                 <span>Commande Terminal</span>
               </button>
               <button
                 type="button"
                 onClick={() => setType('definition')}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
                   type === 'definition'
-                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-2xs'
                     : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
                 }`}
               >
-                <BookOpen className="w-4 h-4" />
+                <BookOpen className="w-4 h-4 text-blue-400" />
                 <span>Définition théorique</span>
               </button>
             </div>
@@ -106,7 +106,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-              Titre / Ce que fait la notion
+              Titre / Objectif
             </label>
             <input
               type="text"
@@ -114,22 +114,22 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Lister tous les ports ouverts sur la machine"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Target Text */}
           <div>
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-              Texte exact à répéter 21 fois (Commande ou phrase précise)
+              Texte exact à répéter 21 fois (Commande ou définition précise)
             </label>
             <textarea
               required
               rows={2}
               value={targetText}
               onChange={(e) => setTargetText(e.target.value)}
-              placeholder="Ex: ss -tuln"
-              className="w-full px-3.5 py-2.5 font-mono rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Ex: ss -tulpn"
+              className="w-full px-3.5 py-2.5 font-mono rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-sm text-blue-700 dark:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -142,7 +142,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {POPULAR_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -157,7 +157,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
                   placeholder="Nom de catégorie..."
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
-                  className="mt-2 w-full px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-xs"
+                  className="mt-2 w-full px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs"
                 />
               )}
             </div>
@@ -170,7 +170,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
               <select
                 value={targetDays}
                 onChange={(e) => setTargetDays(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value={7}>7 jours (1 semaine)</option>
                 <option value={14}>14 jours (2 semaines)</option>
@@ -190,7 +190,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
               placeholder="Ex: -t pour TCP, -u pour UDP, -l pour listening, -n pour numeric"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -199,7 +199,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-500 active:scale-98 text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-98 text-white font-semibold text-sm shadow-sm shadow-blue-600/25 transition-all flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer la notion'}</span>
