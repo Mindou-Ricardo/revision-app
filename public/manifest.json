@@ -1,0 +1,16 @@
+{
+  "name": "21 Reps Drill",
+  "short_name": "21 Reps",
+  "description": "Plateforme d'ancrage profond par répétition intensive (21 fois)",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#ea580c",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

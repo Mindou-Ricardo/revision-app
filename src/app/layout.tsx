@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "21 Reps Drill - Ancrage par Répétition",
   description: "Plateforme d'apprentissage et de révision intensive par répétition (21 fois) et mémoire espacée.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
