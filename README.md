@@ -1,6 +1,6 @@
-# 🚀 21 Reps Drill — Plateforme d'Ancrage Profond
+# 🎓 Memora — Plateforme d'Ancrage & Mémorisation
 
-Plateforme Full-Stack d'apprentissage conçue sur-mesure pour la méthode de révision **"21 Répétitions"** étalées sur plusieurs jours (mémoire musculaire, overlearning et répétition espacée).
+Plateforme Full-Stack conçue pour la méthode d'ancrage par **"21 Répétitions"** étalées sur plusieurs jours (mémoire musculaire, overlearning et répétition espacée).
 
 ---
 

@@ -29,14 +29,14 @@ export function Header({
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <h1 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 tracking-tight whitespace-nowrap">
-                21 Reps<span className="hidden sm:inline"> Drill</span>
+                Memora
               </h1>
               <span className="hidden md:inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
-                Ancrage
+                Ancrage 21x
               </span>
             </div>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 hidden lg:block">
-              21 répétitions par jour • Mémoire musculaire
+              Mémorisation par répétition • Mémoire musculaire
             </p>
           </div>
         </div>
