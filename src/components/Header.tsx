@@ -3,6 +3,7 @@
 import React from 'react';
 import { Zap, Plus, Database, Laptop } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { AppLogo } from './AppLogo';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
@@ -23,10 +24,8 @@ export function Header({
     <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur sticky top-0 z-30 transition-colors">
       <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
         {/* Brand */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-blue-400 flex items-center justify-center text-white font-black text-sm sm:text-lg shadow-sm shadow-blue-500/25 shrink-0">
-            21
-          </div>
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <AppLogo className="w-8 h-8 sm:w-10 sm:h-10 drop-shadow-sm shrink-0" />
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <h1 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 tracking-tight whitespace-nowrap">
