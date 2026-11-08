@@ -4,6 +4,7 @@ import React from 'react';
 import { Zap, Plus, Database, Laptop } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { AppLogo } from './AppLogo';
+import { UserMenu } from './UserMenu';
 
 interface HeaderProps {
   onOpenAddModal: () => void;
@@ -87,6 +88,9 @@ export function Header({
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Nouvelle notion</span>
           </button>
+
+          {/* Compte utilisateur (Google) */}
+          <UserMenu />
         </div>
       </div>
     </header>
