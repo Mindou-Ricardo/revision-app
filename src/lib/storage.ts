@@ -278,6 +278,40 @@ export async function removeItem(itemId: string): Promise<void> {
   if (list) writeLocalItems(list.filter((i) => i.id !== itemId));
 }
 
+// ---------------------------------------------------------------------------
+// Répertoires
+// Un répertoire n'est pas une table : c'est la `category` des notions.
+// Le renommer / supprimer revient donc à agir sur toutes ses notions.
+// ---------------------------------------------------------------------------
+
+export async function renameCategory(oldName: string, newName: string): Promise<void> {
+  const supabase = createClient();
+
+  if (supabase) {
+    const { error } = await supabase.from('items').update({ category: newName }).eq('category', oldName);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const list = readLocalItems();
+  if (list) {
+    writeLocalItems(list.map((i) => (i.category === oldName ? { ...i, category: newName } : i)));
+  }
+}
+
+export async function deleteCategory(name: string): Promise<void> {
+  const supabase = createClient();
+
+  if (supabase) {
+    const { error } = await supabase.from('items').delete().eq('category', name);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const list = readLocalItems();
+  if (list) writeLocalItems(list.filter((i) => i.category !== name));
+}
+
 export async function completeRepetitionSession(
   itemId: string,
   mode: DrillMode,

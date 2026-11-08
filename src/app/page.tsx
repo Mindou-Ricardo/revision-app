@@ -7,6 +7,8 @@ import {
   saveNewItem,
   updateExistingItem,
   removeItem,
+  renameCategory,
+  deleteCategory,
   completeRepetitionSession,
   isCompletedToday,
   exportDataAsJSON,
@@ -31,6 +33,10 @@ import {
   ArrowLeft,
   FolderOpen,
   Loader2,
+  Pencil,
+  Trash2,
+  Check,
+  X,
 } from 'lucide-react';
 import { FolderIcon } from '@/components/FolderIcon';
 
@@ -77,6 +83,11 @@ export default function Home() {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
+  // Renommage du répertoire ouvert
+  const [isRenamingFolder, setIsRenamingFolder] = useState<boolean>(false);
+  const [folderNameDraft, setFolderNameDraft] = useState<string>('');
+  const [isFolderBusy, setIsFolderBusy] = useState<boolean>(false);
+
   // Charger les données au démarrage, puis restaurer le répertoire ouvert
   useEffect(() => {
     let cancelled = false;
@@ -122,14 +133,25 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleGlobalKeys);
   }, [selectedFolder]);
 
+  // Un répertoire n'existe que par ses notions : s'il devient vide, il disparaît.
+  // Dans ce cas on quitte la vue du répertoire (ou on suit la notion déplacée).
+  const applyItemsChange = (nextItems: Item[], fallbackFolder: string | null = null) => {
+    setItems(nextItems);
+    if (selectedFolder && !nextItems.some((i) => (i.category || 'Général') === selectedFolder)) {
+      setSelectedFolder(fallbackFolder);
+      setIsRenamingFolder(false);
+    }
+  };
+
   const handleSaveItem = async (
     itemData: Omit<Item, 'id' | 'created_at' | 'progress'>
   ) => {
     if (editingItem) {
       const updated = await updateExistingItem(editingItem.id, itemData);
       if (updated) {
-        setItems((prev) =>
-          prev.map((i) => (i.id === editingItem.id ? { ...i, ...updated } : i))
+        applyItemsChange(
+          items.map((i) => (i.id === editingItem.id ? { ...i, ...updated } : i)),
+          updated.category || 'Général'
         );
       }
       setEditingItem(null);
@@ -148,10 +170,71 @@ export default function Home() {
     if (!confirm('Supprimer cette notion ?')) return;
     try {
       await removeItem(itemId);
-      setItems((prev) => prev.filter((item) => item.id !== itemId));
+      applyItemsChange(items.filter((item) => item.id !== itemId));
     } catch (e) {
       console.error(e);
       alert(`Suppression impossible : ${e instanceof Error ? e.message : 'erreur inconnue'}`);
+    }
+  };
+
+  const startRenameFolder = () => {
+    if (!selectedFolder) return;
+    setFolderNameDraft(selectedFolder);
+    setIsRenamingFolder(true);
+  };
+
+  const handleRenameFolder = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!selectedFolder) return;
+    const newName = folderNameDraft.trim();
+    if (!newName || newName === selectedFolder) {
+      setIsRenamingFolder(false);
+      return;
+    }
+    if (
+      items.some((i) => (i.category || 'Général') === newName) &&
+      !confirm(`Le répertoire « ${newName} » existe déjà. Fusionner « ${selectedFolder} » dedans ?`)
+    ) {
+      return;
+    }
+
+    setIsFolderBusy(true);
+    try {
+      await renameCategory(selectedFolder, newName);
+      setItems((prev) =>
+        prev.map((i) => ((i.category || 'Général') === selectedFolder ? { ...i, category: newName } : i))
+      );
+      setSelectedFolder(newName);
+      setIsRenamingFolder(false);
+    } catch (err) {
+      console.error(err);
+      alert(`Renommage impossible : ${err instanceof Error ? err.message : 'erreur inconnue'}`);
+    } finally {
+      setIsFolderBusy(false);
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!selectedFolder) return;
+    const count = items.filter((i) => (i.category || 'Général') === selectedFolder).length;
+    if (
+      !confirm(
+        `Supprimer le répertoire « ${selectedFolder} » et ses ${count} notion(s) ?\nLa progression associée sera aussi supprimée. Action irréversible.`
+      )
+    ) {
+      return;
+    }
+
+    setIsFolderBusy(true);
+    try {
+      await deleteCategory(selectedFolder);
+      setItems((prev) => prev.filter((i) => (i.category || 'Général') !== selectedFolder));
+      setSelectedFolder(null);
+    } catch (err) {
+      console.error(err);
+      alert(`Suppression impossible : ${err instanceof Error ? err.message : 'erreur inconnue'}`);
+    } finally {
+      setIsFolderBusy(false);
     }
   };
 
@@ -422,11 +505,12 @@ export default function Home() {
               onClick={() => {
                 setSelectedFolder(null);
                 setSearchQuery('');
+                setIsRenamingFolder(false);
               }}
               className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline mb-4 group"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              <span>← Retour à tous les répertoires</span>
+              <span>Retour à tous les répertoires</span>
             </button>
 
             {/* Folder Header Banner */}
@@ -436,10 +520,47 @@ export default function Home() {
                   <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xs">
                     <FolderIcon name={selectedFolder} />
                   </div>
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-                      {selectedFolder}
-                    </h2>
+                  <div className="min-w-0">
+                    {isRenamingFolder ? (
+                      <form onSubmit={handleRenameFolder} className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          type="text"
+                          aria-label="Nouveau nom du répertoire"
+                          value={folderNameDraft}
+                          onChange={(e) => setFolderNameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              e.stopPropagation();
+                              setIsRenamingFolder(false);
+                            }
+                          }}
+                          disabled={isFolderBusy}
+                          className="min-w-0 w-full max-w-xs px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isFolderBusy}
+                          title="Enregistrer le nom"
+                          className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-60"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsRenamingFolder(false)}
+                          disabled={isFolderBusy}
+                          title="Annuler"
+                          className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </form>
+                    ) : (
+                      <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight break-words">
+                        {selectedFolder}
+                      </h2>
+                    )}
                     <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
                       {selectedFolderAllItems.length} notion(s) • {selectedFolderDoneCount} validée(s) aujourd&apos;hui
                     </p>
@@ -447,7 +568,25 @@ export default function Home() {
                 </div>
 
                 {/* Actions inside folder */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={startRenameFolder}
+                    disabled={isFolderBusy || isRenamingFolder}
+                    title="Renommer le répertoire"
+                    className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Renommer</span>
+                  </button>
+                  <button
+                    onClick={handleDeleteFolder}
+                    disabled={isFolderBusy}
+                    title="Supprimer le répertoire et toutes ses notions"
+                    className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:text-rose-600 hover:border-rose-300 dark:hover:text-rose-400 dark:hover:border-rose-900 font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Supprimer</span>
+                  </button>
                   <button
                     onClick={() => {
                       setEditingItem(null);
