@@ -312,18 +312,7 @@ export default function Home() {
                   className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold text-xs shadow-2xs flex items-center gap-1.5 transition-all"
                 >
                   <Package className="w-4 h-4 text-blue-500" />
-                  <span>Importer un Pack</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setEditingItem(null);
-                    setIsAddModalOpen(true);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-sm shadow-blue-600/25 flex items-center gap-1.5 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Nouveau Répertoire / Notion</span>
+                  <span>Importer un Pack thématique</span>
                 </button>
               </div>
             </div>

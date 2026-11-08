@@ -163,11 +163,11 @@ export function ItemFormModal({ isOpen, onClose, onSave, initialData, defaultCat
             />
           </div>
 
-          {/* Category */}
+          {/* Category / Repertoire */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-                Catégorie (Groupe)
+                Répertoire (Dossier)
               </label>
               <select
                 value={category}
@@ -179,15 +179,16 @@ export function ItemFormModal({ isOpen, onClose, onSave, initialData, defaultCat
                     {cat}
                   </option>
                 ))}
-                <option value="Autre">Autre...</option>
+                <option value="Autre">+ Nouveau répertoire...</option>
               </select>
               {category === 'Autre' && (
                 <input
                   type="text"
-                  placeholder="Nom de catégorie..."
+                  required
+                  placeholder="Ex: Kubernetes, Python, React..."
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
-                  className="mt-2 w-full px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs"
+                  className="mt-2 w-full px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-blue-600 dark:text-blue-400 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               )}
             </div>

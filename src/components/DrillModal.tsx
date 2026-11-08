@@ -21,9 +21,17 @@ interface DrillModalProps {
   item: Item;
   onClose: () => void;
   onSessionComplete: (itemId: string, mode: DrillMode) => void;
+  onNextItem?: () => void;
+  hasNextItem?: boolean;
 }
 
-export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps) {
+export function DrillModal({
+  item,
+  onClose,
+  onSessionComplete,
+  onNextItem,
+  hasNextItem,
+}: DrillModalProps) {
   const [repCount, setRepCount] = useState<number>(0);
   const [mode, setMode] = useState<DrillMode>(item.type === 'command' ? 'typing' : 'verbal');
   const [typedInput, setTypedInput] = useState<string>('');
@@ -353,13 +361,28 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
                   <RotateCcw className="w-4 h-4" />
                   <span>Refaire une série</span>
                 </button>
-                <button
-                  onClick={onClose}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>Terminer</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                {hasNextItem && onNextItem ? (
+                  <button
+                    onClick={() => {
+                      setRepCount(0);
+                      setIsFinished(false);
+                      setStartTime(Date.now());
+                      onNextItem();
+                    }}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span>Notion suivante</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={onClose}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/25 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span>Terminer</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}
