@@ -38,6 +38,16 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
   const inputRef = useRef<HTMLInputElement>(null);
   const TARGET_REPS = 21;
 
+  // Prononciation vocale (Text-to-Speech natif)
+  const speakTargetText = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(item.target_text);
+    utterance.lang = item.type === 'command' ? 'en-US' : 'fr-FR';
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+  };
+
   // Auto-focus l'input à l'ouverture
   useEffect(() => {
     if (mode === 'typing' && !isFinished) {
@@ -195,7 +205,17 @@ export function DrillModal({ item, onClose, onSessionComplete }: DrillModalProps
               {/* Target Snippet Box */}
               <div className="w-full bg-zinc-950 dark:bg-black text-zinc-100 rounded-2xl p-5 mb-6 text-left border border-zinc-800 shadow-inner relative group">
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5 flex items-center justify-between">
-                  <span>Texte cible à répéter (21x)</span>
+                  <div className="flex items-center gap-2">
+                    <span>Texte cible à répéter (21x)</span>
+                    <button
+                      type="button"
+                      onClick={speakTargetText}
+                      title="Écouter la prononciation vocale"
+                      className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-blue-400 transition-colors"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+                    </button>
+                  </div>
                   <span className="text-blue-400 font-mono font-bold">Répétition {repCount + 1} / 21</span>
                 </div>
                 <div className="font-mono text-sm md:text-base text-blue-300 font-semibold select-all break-all">

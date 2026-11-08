@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Item, ItemType } from '@/types';
-import { X, Plus, Terminal, BookOpen } from 'lucide-react';
+import { X, Plus, Check, Terminal, BookOpen } from 'lucide-react';
 
 interface ItemFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (itemData: Omit<Item, 'id' | 'created_at' | 'progress'>) => Promise<void>;
+  initialData?: Item | null;
 }
 
 const POPULAR_CATEGORIES = ['Linux', 'Git', 'Docker', 'SQL', 'TypeScript', 'Réseau', 'Architecture'];
 
-export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
+export function ItemFormModal({ isOpen, onClose, onSave, initialData }: ItemFormModalProps) {
   const [title, setTitle] = useState('');
   const [targetText, setTargetText] = useState('');
   const [type, setType] = useState<ItemType>('command');
@@ -21,6 +22,31 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
   const [targetDays, setTargetDays] = useState(7);
   const [explanation, setExplanation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title);
+      setTargetText(initialData.target_text);
+      setType(initialData.type);
+      if (POPULAR_CATEGORIES.includes(initialData.category)) {
+        setCategory(initialData.category);
+        setCustomCategory('');
+      } else {
+        setCategory('Autre');
+        setCustomCategory(initialData.category);
+      }
+      setTargetDays(initialData.target_days || 7);
+      setExplanation(initialData.explanation || '');
+    } else {
+      setTitle('');
+      setTargetText('');
+      setType('command');
+      setCategory('Linux');
+      setCustomCategory('');
+      setTargetDays(7);
+      setExplanation('');
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -39,11 +65,6 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
         explanation: explanation.trim() || undefined,
       });
 
-      // Reset form
-      setTitle('');
-      setTargetText('');
-      setExplanation('');
-      setCustomCategory('');
       onClose();
     } catch (err) {
       console.error(err);
@@ -52,13 +73,15 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
     }
   };
 
+  const isEditing = Boolean(initialData);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
           <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-            Ajouter une notion à ancrer
+            {isEditing ? 'Modifier la notion' : 'Ajouter une notion à ancrer'}
           </h2>
           <button
             onClick={onClose}
@@ -137,7 +160,7 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-                Catégorie
+                Catégorie (Groupe)
               </label>
               <select
                 value={category}
@@ -201,8 +224,14 @@ export function ItemFormModal({ isOpen, onClose, onSave }: ItemFormModalProps) {
               disabled={isSubmitting}
               className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-98 text-white font-semibold text-sm shadow-sm shadow-blue-600/25 transition-all flex items-center justify-center gap-2"
             >
-              <Plus className="w-4 h-4" />
-              <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer la notion'}</span>
+              {isEditing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>
+                {isSubmitting
+                  ? 'Enregistrement...'
+                  : isEditing
+                  ? 'Enregistrer les modifications'
+                  : 'Enregistrer la notion'}
+              </span>
             </button>
           </div>
         </form>

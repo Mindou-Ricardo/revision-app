@@ -3,15 +3,16 @@
 import React, { useState } from 'react';
 import { Item } from '@/types';
 import { isCompletedToday } from '@/lib/storage';
-import { Play, Copy, Check, Trash2, Zap, Terminal, BookOpen } from 'lucide-react';
+import { Play, Copy, Check, Trash2, Pencil, Zap, Terminal, BookOpen } from 'lucide-react';
 
 interface ItemCardProps {
   item: Item;
   onStartDrill: (item: Item) => void;
   onDelete: (itemId: string) => void;
+  onEdit: (item: Item) => void;
 }
 
-export function ItemCard({ item, onStartDrill, onDelete }: ItemCardProps) {
+export function ItemCard({ item, onStartDrill, onDelete, onEdit }: ItemCardProps) {
   const [copied, setCopied] = useState(false);
   const doneToday = isCompletedToday(item.progress?.last_completed_date);
   const streak = item.progress?.current_streak || 0;
@@ -66,8 +67,15 @@ export function ItemCard({ item, onStartDrill, onDelete }: ItemCardProps) {
               </span>
             )}
             <button
+              onClick={() => onEdit(item)}
+              className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-blue-500 transition-opacity ml-1"
+              title="Modifier"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
               onClick={() => onDelete(item.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-opacity ml-1"
+              className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-opacity"
               title="Supprimer"
             >
               <Trash2 className="w-3.5 h-3.5" />

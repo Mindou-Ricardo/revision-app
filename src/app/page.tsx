@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Item, DrillMode } from '@/types';
 import {
   fetchItems,
   saveNewItem,
+  updateExistingItem,
   removeItem,
   completeRepetitionSession,
   isCompletedToday,
@@ -26,6 +27,13 @@ import {
   Layers,
   Package,
   Download,
+  Upload,
+  Box,
+  GitBranch,
+  Terminal,
+  BookOpen,
+  Database,
+  Folder,
 } from 'lucide-react';
 
 export default function Home() {
@@ -37,11 +45,13 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [filterTab, setFilterTab] = useState<'all' | 'todo' | 'done'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals state
   const [activeDrillItem, setActiveDrillItem] = useState<Item | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isPacksModalOpen, setIsPacksModalOpen] = useState<boolean>(false);
 
   // Charger les données au démarrage
@@ -60,6 +70,7 @@ export default function Home() {
         searchInputRef.current?.focus();
       } else if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
+        setEditingItem(null);
         setIsAddModalOpen(true);
       } else if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
@@ -84,11 +95,26 @@ export default function Home() {
     }
   };
 
-  const handleAddNewItem = async (
-    newItemData: Omit<Item, 'id' | 'created_at' | 'progress'>
+  const handleSaveItem = async (
+    itemData: Omit<Item, 'id' | 'created_at' | 'progress'>
   ) => {
-    const created = await saveNewItem(newItemData);
-    setItems((prev) => [created, ...prev]);
+    if (editingItem) {
+      const updated = await updateExistingItem(editingItem.id, itemData);
+      if (updated) {
+        setItems((prev) =>
+          prev.map((i) => (i.id === editingItem.id ? { ...i, ...updated } : i))
+        );
+      }
+      setEditingItem(null);
+    } else {
+      const created = await saveNewItem(itemData);
+      setItems((prev) => [created, ...prev]);
+    }
+  };
+
+  const handleEditItem = (item: Item) => {
+    setEditingItem(item);
+    setIsAddModalOpen(true);
   };
 
   const handleImportPack = async (
@@ -118,46 +144,103 @@ export default function Home() {
     );
   };
 
-  // Extract categories
-  const categories = ['Tous', ...Array.from(new Set(items.map((i) => i.category)))];
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // Calculs pour les statistiques du jour
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text);
+      if (Array.isArray(imported)) {
+        const addedItems: Item[] = [];
+        for (const itemData of imported) {
+          if (itemData.title && itemData.target_text) {
+            const created = await saveNewItem({
+              title: itemData.title,
+              target_text: itemData.target_text,
+              type: itemData.type || 'command',
+              category: itemData.category || 'Général',
+              target_days: itemData.target_days || 7,
+              explanation: itemData.explanation,
+            });
+            addedItems.push(created);
+          }
+        }
+        setItems((prev) => [...addedItems, ...prev]);
+        alert(`${addedItems.length} notion(s) importée(s) avec succès !`);
+      }
+    } catch {
+      alert('Erreur lors de la lecture du fichier JSON.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Extraire les catégories uniques
+  const categories = useMemo(() => {
+    return ['Tous', ...Array.from(new Set(items.map((i) => i.category)))];
+  }, [items]);
+
+  // Calculs statistiques
   const totalCount = items.length;
   const completedTodayCount = items.filter((i) =>
     isCompletedToday(i.progress?.last_completed_date)
   ).length;
   const todoTodayCount = totalCount - completedTodayCount;
 
-  // Filtrage des éléments affichés
-  const filteredItems = items.filter((item) => {
-    const isDone = isCompletedToday(item.progress?.last_completed_date);
+  // Filtrage
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const isDone = isCompletedToday(item.progress?.last_completed_date);
 
-    // Tab filter
-    if (filterTab === 'todo' && isDone) return false;
-    if (filterTab === 'done' && !isDone) return false;
+      if (filterTab === 'todo' && isDone) return false;
+      if (filterTab === 'done' && !isDone) return false;
 
-    // Category filter
-    if (selectedCategory !== 'Tous' && item.category !== selectedCategory) {
-      return false;
+      if (selectedCategory !== 'Tous' && item.category !== selectedCategory) {
+        return false;
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = item.title.toLowerCase().includes(q);
+        const matchText = item.target_text.toLowerCase().includes(q);
+        const matchCat = item.category.toLowerCase().includes(q);
+        if (!matchTitle && !matchText && !matchCat) return false;
+      }
+
+      return true;
+    });
+  }, [items, filterTab, selectedCategory, searchQuery]);
+
+  // Regroupement par Catégorie (Groupes)
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, Item[]> = {};
+    for (const item of filteredItems) {
+      const cat = item.category || 'Général';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
     }
+    return groups;
+  }, [filteredItems]);
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = item.title.toLowerCase().includes(q);
-      const matchText = item.target_text.toLowerCase().includes(q);
-      const matchCat = item.category.toLowerCase().includes(q);
-      if (!matchTitle && !matchText && !matchCat) return false;
-    }
-
-    return true;
-  });
+  const getCategoryIcon = (categoryName: string) => {
+    const lower = categoryName.toLowerCase();
+    if (lower.includes('docker')) return <Box className="w-4 h-4 text-blue-500" />;
+    if (lower.includes('git')) return <GitBranch className="w-4 h-4 text-blue-500" />;
+    if (lower.includes('linux')) return <Terminal className="w-4 h-4 text-blue-400" />;
+    if (lower.includes('sql') || lower.includes('base')) return <Database className="w-4 h-4 text-blue-500" />;
+    if (lower.includes('archi') || lower.includes('déf')) return <BookOpen className="w-4 h-4 text-blue-400" />;
+    return <Folder className="w-4 h-4 text-blue-500" />;
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200">
       {/* Top Header */}
       <Header
-        onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenAddModal={() => {
+          setEditingItem(null);
+          setIsAddModalOpen(true);
+        }}
         onOpenPacksModal={() => setIsPacksModalOpen(true)}
         isSupabase={isSupabase}
         totalCards={totalCount}
@@ -241,7 +324,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Filter bar & Search */}
+        {/* Filter bar, Search & Export/Import */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
           {/* Categories horizontal scroll */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
@@ -260,7 +343,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Search box & Export */}
+          {/* Search box & JSON Export/Import */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative w-full sm:w-64">
               <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -274,6 +357,23 @@ export default function Home() {
               />
             </div>
 
+            {/* Hidden JSON file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              onChange={handleFileImport}
+              className="hidden"
+            />
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title="Importer des notions depuis un fichier JSON"
+              className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+            >
+              <Upload className="w-4 h-4" />
+            </button>
+
             <button
               onClick={() => exportDataAsJSON(items)}
               title="Exporter mes notions en JSON (Sauvegarde)"
@@ -284,7 +384,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Grid of Cards */}
+        {/* Content: Grouped by Category */}
         {isLoading ? (
           <div className="py-20 text-center text-zinc-400 text-sm">
             Chargement de tes notions...
@@ -309,7 +409,10 @@ export default function Home() {
                 <span>Packs thématiques</span>
               </button>
               <button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  setEditingItem(null);
+                  setIsAddModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm shadow-blue-600/20"
               >
                 <Plus className="w-4 h-4" />
@@ -318,15 +421,52 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                onStartDrill={(target) => setActiveDrillItem(target)}
-                onDelete={handleDeleteItem}
-              />
-            ))}
+          /* Render by Category Groups */
+          <div className="space-y-8">
+            {Object.entries(groupedItems).map(([groupCategory, groupList]) => {
+              const groupDoneCount = groupList.filter((i) =>
+                isCompletedToday(i.progress?.last_completed_date)
+              ).length;
+              const groupTotal = groupList.length;
+
+              return (
+                <section key={groupCategory} className="space-y-3">
+                  {/* Group Header */}
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/50 dark:border-blue-900/40">
+                        {getCategoryIcon(groupCategory)}
+                      </div>
+                      <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100 tracking-tight">
+                        {groupCategory}
+                      </h3>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                        {groupTotal}
+                      </span>
+                    </div>
+
+                    <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                      <span className={groupDoneCount === groupTotal ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''}>
+                        {groupDoneCount}/{groupTotal} fait aujourd&apos;hui
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Grid of Cards for this Group */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {groupList.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        onStartDrill={(target) => setActiveDrillItem(target)}
+                        onDelete={handleDeleteItem}
+                        onEdit={handleEditItem}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </main>
@@ -340,11 +480,15 @@ export default function Home() {
         />
       )}
 
-      {/* Add New Item Modal */}
+      {/* Add / Edit Item Modal */}
       <ItemFormModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSave={handleAddNewItem}
+        initialData={editingItem}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingItem(null);
+        }}
+        onSave={handleSaveItem}
       />
 
       {/* Starter Packs Modal */}

@@ -184,6 +184,69 @@ export async function saveNewItem(
   return newItem;
 }
 
+export async function updateExistingItem(
+  itemId: string,
+  updates: Partial<Omit<Item, 'id' | 'created_at' | 'progress'>>
+): Promise<Item | null> {
+  const supabase = createClient();
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .update({
+          title: updates.title,
+          target_text: updates.target_text,
+          type: updates.type,
+          category: updates.category,
+          target_days: updates.target_days,
+          explanation: updates.explanation,
+        })
+        .eq('id', itemId)
+        .select('*, progress:item_progress(*)')
+        .single();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          user_id: data.user_id,
+          title: data.title,
+          target_text: data.target_text,
+          type: data.type,
+          category: data.category,
+          target_days: data.target_days,
+          explanation: data.explanation,
+          created_at: data.created_at,
+          progress: Array.isArray(data.progress) ? data.progress[0] : data.progress,
+        };
+      }
+    } catch (e) {
+      console.warn('Erreur modification Supabase:', e);
+    }
+  }
+
+  // Fallback LocalStorage
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const list: Item[] = JSON.parse(raw);
+      let updatedItem: Item | null = null;
+      const updatedList = list.map((item) => {
+        if (item.id === itemId) {
+          updatedItem = { ...item, ...updates };
+          return updatedItem;
+        }
+        return item;
+      });
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
+      return updatedItem;
+    }
+  }
+
+  return null;
+}
+
+
 export async function removeItem(itemId: string): Promise<void> {
   const supabase = createClient();
   if (supabase) {
