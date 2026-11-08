@@ -1,45 +1,56 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useLayoutEffect, useSyncExternalStore } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
 
-export type Theme = 'light' | 'dark';
+function readStoredTheme(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    // localStorage indisponible (navigation privée, etc.)
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+}
+
+// Le thème réel vit sur <html class="dark"> (posé par le script inline du layout).
+// On s'abonne aux changements de cette classe plutôt que de dupliquer l'état.
+function subscribe(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return () => observer.disconnect();
+}
+
+const getSnapshot = (): Theme =>
+  document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+
+const getServerSnapshot = (): Theme | null => null;
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [mounted, setMounted] = useState(false);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem('revision_theme') as Theme | null;
-    if (stored) {
-      setTheme(stored);
-      applyTheme(stored);
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const initial = prefersDark ? 'dark' : 'light';
-      setTheme(initial);
-      applyTheme(initial);
-    }
+  // En dev, le remontage du Strict Mode efface la classe posée par le script inline :
+  // on la ré-applique avant l'affichage. Sans effet en production.
+  useLayoutEffect(() => {
+    applyTheme(readStoredTheme());
   }, []);
 
-  const applyTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-    if (newTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  };
-
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('revision_theme', next);
+    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
     applyTheme(next);
   };
 
-  if (!mounted) {
+  if (theme === null) {
     return (
       <div className="w-8 h-8 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900" />
     );
